@@ -33,8 +33,9 @@
                 <h1 class="text-xl font-bold tracking-wide"><i class="fa-solid fa-crab text-orange-300 mr-2"></i>ธนาคารปูม้า</h1>
                 <p class="text-[11px] text-blue-100 opacity-90">ESG & SROI Management System</p>
             </div>
+            <!-- Sync Button -->
             <button onclick="syncToGoogleSheets()" class="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors" title="ซิงค์ข้อมูล Google Sheets">
-                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <i class="fa-solid fa-cloud-arrow-up" id="sync-icon"></i>
             </button>
         </header>
 
@@ -107,16 +108,20 @@
 
     <script>
         // ==========================================
-        // 1. DATABASE & STATE
+        // 1. CONFIGURATION & STATE
         // ==========================================
+        
+        // ! สำคัญ: นำ Web App URL ที่ได้จาก Google Apps Script มาใส่ที่นี่ !
+        const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbxA8p3ScOeW4ncUdpBsPuUBhLucv9Y6ZHVArqeAbcpqXt2E75BRwdiY6fCG-C4Fi4mjWw/exec'; // <--- แทนที่ด้วย URL ของคุณ
+
         const MAX_MEMBERS = 300;
         let barChartInstance = null;
         let donutChartInstance = null;
         let purchaseDonutChartInstance = null;
-        let currentSelectedYear = 2026; // เริ่มต้นที่ปี 2569
+        let currentSelectedYear = 2026; // เริ่มต้นที่ปี 2569 (2026)
         let currentChartMode = 'monthly'; // 'yearly', 'monthly', 'daily'
 
-        // Default Data Structure
+        // ข้อมูลตั้งต้น (กรณีเปิดครั้งแรก)
         const defaultDB = {
             members: [
                 { id: 'F001', name: 'สมชาย รักษ์ทะเล', phone: '0811111111', area: 'สะพลี', points: 50 },
@@ -137,6 +142,7 @@
             ]
         };
 
+        // โหลดข้อมูลจาก LocalStorage
         let db = JSON.parse(localStorage.getItem('crabBankData'));
         if (!db) {
             db = defaultDB;
@@ -148,6 +154,9 @@
             localStorage.setItem('crabBankData', JSON.stringify(db));
         }
 
+        // ==========================================
+        // 2. HELPER FUNCTIONS
+        // ==========================================
         function generateMemberId() {
             const num = db.members.length + 1;
             return 'F' + num.toString().padStart(3, '0');
@@ -172,7 +181,7 @@
         }
 
         // ==========================================
-        // 2. UI NAVIGATION & RENDERING
+        // 3. UI RENDERING & NAVIGATION
         // ==========================================
         const mainContent = document.getElementById('main-content');
 
@@ -188,6 +197,7 @@
                 }
             });
 
+            // ทำลายกราฟเก่าทิ้งเมื่อเปลี่ยนหน้า
             if (barChartInstance) { barChartInstance.destroy(); barChartInstance = null; }
             if (donutChartInstance) { donutChartInstance.destroy(); donutChartInstance = null; }
             if (purchaseDonutChartInstance) { purchaseDonutChartInstance.destroy(); purchaseDonutChartInstance = null; }
@@ -200,6 +210,7 @@
         }
 
         function renderDashboard() {
+            // คำนวณปีทั้งหมดที่มีในระบบ เพื่อสร้างตัวเลือก (เริ่มต้นจาก 2026/2569)
             const yearsSet = new Set(db.deposits.map(d => parseInt(d.date.substring(0, 4))));
             yearsSet.add(new Date().getFullYear());
             yearsSet.add(2026);
@@ -217,7 +228,7 @@
                     <div class="flex justify-between items-center bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
                         <div>
                             <h2 class="text-sm font-bold text-gray-800">ภาพรวมธนาคารปูม้า</h2>
-                            <p class="text-[10px] text-gray-400">Google Sheets Integration</p>
+                            <p class="text-[10px] text-gray-400">ข้อมูลอัปเดตแบบเรียลไทม์</p>
                         </div>
                         <select id="dash-year-filter" onchange="updateDashboardData()" class="bg-gray-50 border border-gray-300 text-gray-700 text-xs rounded-lg px-3 py-2 font-medium focus:ring-blue-500 outline-none">
                             ${yearOptions}
@@ -243,19 +254,7 @@
                         </div>
                     </div>
 
-                    <!-- Quick Actions -->
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="switchTab('deposit')" class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center space-x-2 text-blue-700 font-bold active:scale-95 transition-transform">
-                            <div class="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center"><i class="fa-solid fa-plus text-sm"></i></div>
-                            <span class="text-xs">รับฝากแม่ปู</span>
-                        </button>
-                        <button onclick="switchTab('release')" class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center space-x-2 text-green-600 font-bold active:scale-95 transition-transform">
-                            <div class="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center"><i class="fa-solid fa-arrow-up-right-dots text-sm"></i></div>
-                            <span class="text-xs">ปล่อยลูกปู</span>
-                        </button>
-                    </div>
-
-                    <!-- Chart Section: Bar with Mode Toggles -->
+                    <!-- Chart Section: Bar with Mode Toggles (Daily, Monthly, Yearly) -->
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
                         <div class="flex justify-between items-center mb-3">
                             <h3 class="text-xs font-bold text-gray-800 flex items-center"><i class="fa-solid fa-chart-simple text-blue-500 mr-2"></i>สถิติรับฝากแม่ปู</h3>
@@ -301,7 +300,7 @@
 
                     <!-- ESG & SROI Summary -->
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                        <h3 class="text-xs font-bold text-gray-800 mb-3 border-b pb-2">ผลลัพธ์ความยั่งยืน (ESG & SROI) สะสม</h3>
+                        <h3 class="text-xs font-bold text-gray-800 mb-3 border-b pb-2">ผลลัพธ์ความยั่งยืน (ESG & SROI) สะสมทั้งหมด</h3>
                         
                         <div class="grid grid-cols-2 gap-3 mb-3">
                             <div class="bg-green-50 p-3 rounded-xl border border-green-100">
@@ -399,11 +398,12 @@
             const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
             document.getElementById('kpi-pur-month-label').innerText = thaiMonths[currentMonth-1] + ' ' + (currentSelectedYear + 543);
 
+            // Filter data by selected year
             const yearlyDeposits = db.deposits.filter(d => parseInt(d.date.substring(0, 4)) === currentSelectedYear);
             const yearlyReleases = db.releases.filter(r => parseInt(r.date.substring(0, 4)) === currentSelectedYear);
             const yearlyPurchases = db.purchases.filter(p => parseInt(p.date.substring(0, 4)) === currentSelectedYear);
 
-            // KPIs
+            // KPIs: Zoea Release
             const totalZoea = yearlyReleases.reduce((sum, r) => sum + r.zoeaReleased, 0);
             const targetZoea = 10000000;
             const progressPct = Math.min((totalZoea / targetZoea) * 100, 100);
@@ -412,6 +412,7 @@
             document.getElementById('kpi-progress-pct').innerText = `${progressPct.toFixed(1)}%`;
             document.getElementById('kpi-progress-bar').style.width = `${progressPct}%`;
 
+            // KPIs: ESG & SROI (All time)
             const allZoea = db.releases.reduce((sum, r) => sum + r.zoeaReleased, 0);
             const survivors = allZoea * 0.01; 
             const econValue = survivors * 75; 
@@ -422,7 +423,7 @@
             document.getElementById('kpi-sroi-details').innerText = `มูลค่า ฿${econValue.toLocaleString()} / ทุน ฿${opCost.toLocaleString()}`;
             document.getElementById('kpi-sroi-multiplier').innerText = `${sroi.toFixed(2)}x`;
 
-            // Bar Chart Modes: Daily, Monthly, Yearly
+            // Update Bar Chart based on mode
             let labels = [];
             let chartData = [];
 
@@ -440,7 +441,6 @@
                     return db.deposits.filter(d => parseInt(d.date.substring(0,4)) === y).reduce((s, d) => s + d.crabs, 0);
                 });
             } else if (currentChartMode === 'daily') {
-                // Show daily records for currentSelectedYear
                 let dateMap = {};
                 yearlyDeposits.forEach(d => {
                     dateMap[d.date] = (dateMap[d.date] || 0) + d.crabs;
@@ -450,7 +450,7 @@
                     sortedDates = [getTodayDate()];
                     dateMap[getTodayDate()] = 0;
                 }
-                labels = sortedDates.map(dt => dt.substring(5)); // MM-DD
+                labels = sortedDates.map(dt => dt.substring(5)); // DD-MM
                 chartData = sortedDates.map(dt => dateMap[dt]);
             }
 
@@ -463,7 +463,7 @@
             }];
             barChartInstance.update();
 
-            // Donut Egg Color
+            // Update Donut Egg Color (Yearly filter applied)
             let colorCounts = { 'เหลือง': 0, 'ส้ม': 0, 'ดำ': 0 };
             yearlyDeposits.forEach(d => {
                 if(colorCounts[d.eggColor] !== undefined) colorCounts[d.eggColor] += d.crabs;
@@ -477,7 +477,7 @@
             }];
             donutChartInstance.update();
 
-            // Purchase Donut & Totals
+            // Update Purchase Donut & Totals (Yearly filter applied)
             let totalWeightM = 0;
             let totalWeightL = 0;
             let totalAmtYear = 0;
@@ -505,6 +505,10 @@
             purchaseDonutChartInstance.update();
         }
 
+        // ==========================================
+        // 4. FORMS & LOGIC (DEPOSIT, RELEASE, PURCHASE)
+        // ==========================================
+
         function renderDeposit() {
             let memberOptions = db.members.map(m => `<option value="${m.id}">${m.id} - ${m.name}</option>`).join('');
             
@@ -517,7 +521,7 @@
                             </div>
                             <div>
                                 <h2 class="text-base font-bold text-gray-800">ระบบรับฝากแม่ปู</h2>
-                                <p class="text-[10px] text-gray-500">Deposit Log (Sheet 2)</p>
+                                <p class="text-[10px] text-gray-500">บันทึกข้อมูลรับฝากปูใหม่</p>
                             </div>
                         </div>
 
@@ -526,7 +530,7 @@
                             <!-- Date Selection (Customizable Date) -->
                             <div class="mb-4">
                                 <label class="block text-xs font-medium text-gray-600 mb-1.5">วันที่รับฝาก (วัน/เดือน/ปี)</label>
-                                <input type="date" id="dep-date" value="${getTodayDate()}" required class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium">
+                                <input type="date" id="dep-date" value="${getTodayDate()}" required class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium text-gray-800">
                             </div>
 
                             <!-- Member Selection -->
@@ -610,7 +614,7 @@
                             </div>
                             <div>
                                 <h2 class="text-base font-bold text-gray-800">ปล่อยลูกปูคืนสู่ทะเล</h2>
-                                <p class="text-[10px] text-gray-500">Release Log & Calculation (Sheet 3)</p>
+                                <p class="text-[10px] text-gray-500">บันทึกอัตราการรอดชีวิต</p>
                             </div>
                         </div>
 
@@ -671,7 +675,7 @@
                             </div>
                             <div>
                                 <h2 class="text-base font-bold text-gray-800">รับซื้อปูม้าจากสมาชิก</h2>
-                                <p class="text-[10px] text-gray-500">Purchase Log</p>
+                                <p class="text-[10px] text-gray-500">บันทึกยอดขายและจ่ายเงิน</p>
                             </div>
                         </div>
 
@@ -738,57 +742,6 @@
             `;
         }
 
-        function autoFillPurchaseMember() {
-            const select = document.getElementById('pur-member');
-            const selectedOption = select.options[select.selectedIndex];
-            if(selectedOption.value) {
-                document.getElementById('pur-name').value = selectedOption.getAttribute('data-name');
-                document.getElementById('pur-phone').value = selectedOption.getAttribute('data-phone');
-            }
-        }
-
-        function calculatePurchaseTotal() {
-            const weightM = parseFloat(document.getElementById('pur-weight-m').value) || 0;
-            const priceM = parseFloat(document.getElementById('pur-price-m').value) || 0;
-            const weightL = parseFloat(document.getElementById('pur-weight-l').value) || 0;
-            const priceL = parseFloat(document.getElementById('pur-price-l').value) || 0;
-            const total = (weightM * priceM) + (weightL * priceL);
-            document.getElementById('pur-total-display').innerText = total.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        }
-
-        function handlePurchaseSubmit(e) {
-            e.preventDefault();
-            const memberId = document.getElementById('pur-member').value;
-            const weightM = parseFloat(document.getElementById('pur-weight-m').value) || 0;
-            const priceM = parseFloat(document.getElementById('pur-price-m').value) || 0;
-            const weightL = parseFloat(document.getElementById('pur-weight-l').value) || 0;
-            const priceL = parseFloat(document.getElementById('pur-price-l').value) || 0;
-            const total = (weightM * priceM) + (weightL * priceL);
-
-            if (total <= 0) {
-                showToast('กรุณาระบุน้ำหนักปูอย่างน้อย 1 รายการ');
-                return;
-            }
-
-            db.purchases.push({
-                txnId: generateTxnId('PUR'),
-                date: getTodayDate(),
-                memberId: memberId,
-                weightM: weightM,
-                priceM: priceM,
-                weightL: weightL,
-                priceL: priceL,
-                totalAmt: total
-            });
-            saveDB();
-            
-            showToast('บันทึกการรับซื้อเรียบร้อย!');
-            setTimeout(() => {
-                document.getElementById('form-purchase').reset();
-                calculatePurchaseTotal();
-            }, 1000);
-        }
-
         function renderMembers() {
             const totalMembers = db.members.length;
             let passbookHTML = db.members.map(m => `
@@ -814,7 +767,7 @@
                     <div class="flex justify-between items-end mb-4">
                         <div>
                             <h2 class="text-base font-bold text-gray-800">บัญชีสมาชิกชาวประมง</h2>
-                            <p class="text-[10px] text-gray-500">Member Registry (Sheet 1 - รองรับสูงสุด 300 คน)</p>
+                            <p class="text-[10px] text-gray-500">รองรับสูงสุด 300 ครัวเรือน</p>
                         </div>
                         <div class="text-right">
                             <span class="text-sm font-bold text-blue-600">${totalMembers}</span><span class="text-xs text-gray-500">/300</span>
@@ -826,7 +779,7 @@
                     </div>
 
                     <button onclick="openAddMemberModal()" class="w-full bg-white border-2 border-dashed border-blue-300 text-blue-600 font-bold py-3 rounded-xl hover:bg-blue-50 transition-colors flex items-center justify-center">
-                        <i class="fa-solid fa-user-plus mr-2"></i> ลงทะเบียนสมาชิกใหม่ (เพิ่มเข้า 300 คน)
+                        <i class="fa-solid fa-user-plus mr-2"></i> ลงทะเบียนสมาชิกใหม่
                     </button>
                 </div>
             `;
@@ -858,13 +811,7 @@
             const phone = document.getElementById('new-member-phone').value;
             const area = document.getElementById('new-member-area').value;
 
-            db.members.push({
-                id: generateMemberId(),
-                name: name,
-                phone: phone,
-                area: area,
-                points: 0
-            });
+            db.members.push({ id: generateMemberId(), name: name, phone: phone, area: area, points: 0 });
             saveDB();
             closeModal('modal-add-member');
             showToast('เพิ่มสมาชิกใหม่สำเร็จ!');
@@ -937,14 +884,7 @@
             const location = document.getElementById('rel-location').value;
             const zoeaReleased = Math.floor(crabs * 500000 * (rate / 100));
 
-            db.releases.push({
-                date: getTodayDate(),
-                refTxn: txnId,
-                hatchedCrabs: crabs,
-                hatchRate: rate,
-                zoeaReleased: zoeaReleased,
-                location: location
-            });
+            db.releases.push({ date: getTodayDate(), refTxn: txnId, hatchedCrabs: crabs, hatchRate: rate, zoeaReleased: zoeaReleased, location: location });
             
             let deposit = db.deposits.find(d => d.txnId === txnId);
             if(deposit) deposit.status = 'ฟักแล้ว';
@@ -954,33 +894,89 @@
             switchTab('dashboard');
         }
 
-        async function syncToGoogleSheets() {
-            const btn = document.querySelector('.fa-cloud-arrow-up').parentElement;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-            const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbxA8p3ScOeW4ncUdpBsPuUBhLucv9Y6ZHVArqeAbcpqXt2E75BRwdiY6fCG-C4Fi4mjWw/exec';
-            
-            try {
-                const response = await fetch(GOOGLE_SHEET_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'syncData', sheetsId: '1oiey5ZM2eRjYqKYHKvWM25IdlcFOf--KadZrQ5ssOx8', payload: db })
-                });
-                const result = await response.json();
-                if (result.status === 'success') {
-                    btn.innerHTML = '<i class="fa-solid fa-check"></i>';
-                    showToast('ซิงค์ข้อมูลกับ Google Sheets สำเร็จ!');
-                } else {
-                    throw new Error();
-                }
-            } catch (err) {
-                btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i>';
-                showToast('เชื่อมต่อ Google Sheets สำเร็จ (Mock Sync)');
+        function autoFillPurchaseMember() {
+            const select = document.getElementById('pur-member');
+            const selectedOption = select.options[select.selectedIndex];
+            if(selectedOption.value) {
+                document.getElementById('pur-name').value = selectedOption.getAttribute('data-name');
+                document.getElementById('pur-phone').value = selectedOption.getAttribute('data-phone');
             }
-            setTimeout(() => {
-                btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i>';
-            }, 2000);
         }
 
+        function calculatePurchaseTotal() {
+            const weightM = parseFloat(document.getElementById('pur-weight-m').value) || 0;
+            const priceM = parseFloat(document.getElementById('pur-price-m').value) || 0;
+            const weightL = parseFloat(document.getElementById('pur-weight-l').value) || 0;
+            const priceL = parseFloat(document.getElementById('pur-price-l').value) || 0;
+            const total = (weightM * priceM) + (weightL * priceL);
+            document.getElementById('pur-total-display').innerText = total.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        function handlePurchaseSubmit(e) {
+            e.preventDefault();
+            const memberId = document.getElementById('pur-member').value;
+            const weightM = parseFloat(document.getElementById('pur-weight-m').value) || 0;
+            const priceM = parseFloat(document.getElementById('pur-price-m').value) || 0;
+            const weightL = parseFloat(document.getElementById('pur-weight-l').value) || 0;
+            const priceL = parseFloat(document.getElementById('pur-price-l').value) || 0;
+            const total = (weightM * priceM) + (weightL * priceL);
+
+            if (total <= 0) {
+                showToast('กรุณาระบุน้ำหนักปูอย่างน้อย 1 รายการ');
+                return;
+            }
+
+            db.purchases.push({
+                txnId: generateTxnId('PUR'),
+                date: getTodayDate(),
+                memberId: memberId,
+                weightM: weightM, priceM: priceM,
+                weightL: weightL, priceL: priceL,
+                totalAmt: total
+            });
+            saveDB();
+            
+            showToast('บันทึกการรับซื้อเรียบร้อย!');
+            switchTab('dashboard');
+        }
+
+        async function syncToGoogleSheets() {
+            if(GOOGLE_SHEET_URL === 'YOUR_WEB_APP_URL') {
+                showToast('กรุณาตั้งค่า URL ของ Web App ในโค้ดก่อนทำการ Sync');
+                return;
+            }
+            const icon = document.getElementById('sync-icon');
+            icon.classList.remove('fa-cloud-arrow-up');
+            icon.classList.add('fa-spinner', 'fa-spin');
+            
+            try {
+                // ส่งข้อมูล (db) ขึ้นไปยัง Google Apps Script
+                const response = await fetch(GOOGLE_SHEET_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'syncData', payload: db })
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    icon.classList.remove('fa-spinner', 'fa-spin');
+                    icon.classList.add('fa-check');
+                    showToast('ซิงค์ข้อมูลกับ Google Sheets สำเร็จ!');
+                } else {
+                    throw new Error(result.message || 'Error');
+                }
+            } catch (err) {
+                console.error(err);
+                icon.classList.remove('fa-spinner', 'fa-spin');
+                icon.classList.add('fa-triangle-exclamation');
+                showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ Google Sheets');
+            }
+            
+            setTimeout(() => {
+                icon.className = 'fa-solid fa-cloud-arrow-up';
+            }, 3000);
+        }
+
+        // เริ่มต้นการทำงานที่หน้าแรก
         window.onload = () => switchTab('dashboard');
     </script>
 </body>
