@@ -188,9 +188,10 @@
             const user = document.getElementById('login-user').value.trim();
             const pass = document.getElementById('login-pass').value.trim();
 
-            if (user === 'Admin' && pass === '1234') {
+            // ปรับให้เป็น toLowerCase() เพื่อให้พิมพ์ Admin หรือ admin ก็เข้าได้
+            if (user.toLowerCase() === 'admin' && pass === '1234') {
                 currentUser = 'Admin'; currentRole = 'admin';
-            } else if (user === 'user' && pass === '4321') {
+            } else if (user.toLowerCase() === 'user' && pass === '4321') {
                 currentUser = 'User (Staff)'; currentRole = 'user';
             } else {
                 showToast('❌ Username หรือ Password ไม่ถูกต้อง');
@@ -628,14 +629,35 @@
             e.preventDefault();
             if (db.members.length >= MAX_MEMBERS) { showToast('สมาชิกเต็ม 300 คนแล้ว'); return; }
             const id = 'F' + (db.members.length + 1).toString().padStart(3, '0');
+            
+            const name = document.getElementById('new-member-name').value;
+            const phone = document.getElementById('new-member-phone').value;
+            const area = document.getElementById('new-member-area').value;
+            
             const row = [
                 id, 
-                document.getElementById('new-member-name').value,
-                document.getElementById('new-member-phone').value,
-                document.getElementById('new-member-area').value,
+                name,
+                phone,
+                area,
                 0 // Points
             ];
+            
             closeModal('modal-add-member');
+            
+            // ล้างข้อมูลในฟอร์มหลังจากกดบันทึก
+            document.getElementById('new-member-name').value = '';
+            document.getElementById('new-member-phone').value = '';
+            document.getElementById('new-member-area').value = 'สะพลี';
+
+            // จัดการกรณี Offline Mode ให้ข้อมูลอัปเดตบนหน้าจอทันที
+            if (typeof google === 'undefined') {
+                db.members.push({ id: id, name: name, phone: phone, area: area, points: 0 });
+                showToast('Offline Mode: เพิ่มสมาชิกจำลองสำเร็จ');
+                renderMembers(); // สั่งให้วาดหน้าสมาชิกใหม่
+                return;
+            }
+
+            // กรณีใช้งานบน Google Apps Script จริง
             pushDataToSheet('Member_Registry', row, `Added member ${id}`, 'เพิ่มสมาชิกสำเร็จ');
         }
 
