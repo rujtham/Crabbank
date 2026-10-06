@@ -71,10 +71,16 @@
                 <h1 class="text-xl font-bold tracking-wide"><i class="fa-solid fa-crab text-orange-300 mr-2"></i>ธนาคารปูม้า</h1>
                 <p class="text-[10px] text-blue-100 opacity-90">ผู้ใช้งาน: <span id="lbl-current-user" class="font-bold"></span></p>
             </div>
-            <!-- Sync/Refresh Button -->
-            <button onclick="refreshData()" class="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors shadow-sm" title="รีเฟรชข้อมูลจากระบบ">
-                <i class="fa-solid fa-rotate" id="sync-icon"></i>
-            </button>
+            <div class="flex items-center">
+                <!-- Sync/Refresh Button -->
+                <button onclick="refreshData()" class="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors shadow-sm" title="รีเฟรชข้อมูลจากระบบ">
+                    <i class="fa-solid fa-rotate" id="sync-icon"></i>
+                </button>
+                <!-- Logout Button -->
+                <button onclick="handleLogout()" class="w-9 h-9 bg-red-500/80 hover:bg-red-600 rounded-full flex items-center justify-center text-white transition-colors shadow-sm ml-2" title="ออกจากระบบ">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
         </header>
 
         <!-- Main Content Area -->
@@ -153,7 +159,7 @@
         let currentRole = null; // 'admin' or 'user'
         const MAX_MEMBERS = 300;
         
-        let db = { members: [], deposits: [], releases: [], purchases: [] };
+        let db = { members: [], deposits: [], releases: [], purchases: [], logoUrl: 'https://cdn-icons-png.flaticon.com/512/3060/3060265.png' };
         let currentSelectedYear = 2026;
         let currentChartMode = 'monthly'; 
         let barChartInstance, donutChartInstance, purchaseDonutChartInstance = null;
@@ -197,8 +203,28 @@
             document.getElementById('app-container').classList.remove('hidden');
             document.getElementById('app-container').classList.add('flex');
             
+            // บันทึก Log การเข้าสู่ระบบ
+            if (typeof google !== 'undefined') {
+                google.script.run.logEvent(currentUser, 'Login', 'เข้าสู่ระบบสำเร็จ');
+            }
+            
             // โหลดข้อมูลจาก Google Sheets
             refreshData();
+        }
+
+        // ระบบ Logout
+        function handleLogout() {
+            if (typeof google !== 'undefined' && currentUser) {
+                google.script.run.logEvent(currentUser, 'Logout', 'ออกจากระบบ');
+            }
+            currentUser = null;
+            currentRole = null;
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-pass').value = '';
+            document.getElementById('app-container').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('flex');
+            document.getElementById('login-container').classList.remove('hidden');
+            showToast('ออกจากระบบแล้ว');
         }
 
         // ==========================================
@@ -313,6 +339,17 @@
 
             mainContent.innerHTML = `
                 <div class="p-4 space-y-4 pb-10">
+                    <!-- โลโก้โครงการ -->
+                    <div class="flex justify-center relative group pt-2 pb-2">
+                        <div class="relative inline-block">
+                            <img src="${db.logoUrl || 'https://cdn-icons-png.flaticon.com/512/3060/3060265.png'}" id="dashboard-logo" class="h-24 w-24 object-contain rounded-2xl bg-white p-2 shadow-md border border-gray-100 transition-transform duration-300">
+                            ${currentRole === 'admin' ? `
+                            <button onclick="changeLogo()" class="absolute -bottom-2 -right-2 bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-blue-700 border-2 border-white z-10" title="เปลี่ยนโลโก้">
+                                <i class="fa-solid fa-camera text-[10px]"></i>
+                            </button>` : ''}
+                        </div>
+                    </div>
+
                     <div class="flex justify-between items-center bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
                         <div>
                             <h2 class="text-sm font-bold text-gray-800">ภาพรวมธนาคารปูม้า</h2>
@@ -658,8 +695,36 @@
                 members: [{ id: 'F001', name: 'สมชาย รักษ์ทะเล', phone: '0811111111', area: 'สะพลี', points: 50 }],
                 deposits: [{ txnId: 'TXN-0001', date: '2026-10-01', memberId: 'F001', crabs: 15, weight: 3.2, eggColor: 'เหลือง', estHatchDate: '2026-10-11', status: 'กำลังฟัก' }],
                 releases: [],
-                purchases: [{ txnId: 'PUR-0001', date: '2026-10-02', memberId: 'F001', weightM: 2.5, priceM: 250, weightL: 1.0, priceL: 350, totalAmt: 975 }]
+                purchases: [{ txnId: 'PUR-0001', date: '2026-10-02', memberId: 'F001', weightM: 2.5, priceM: 250, weightL: 1.0, priceL: 350, totalAmt: 975 }],
+                logoUrl: 'https://cdn-icons-png.flaticon.com/512/3060/3060265.png'
             };
+        }
+
+        // เปลี่ยนรูป Logo (เฉพาะ Admin)
+        function changeLogo() {
+            const currentUrl = db.logoUrl || '';
+            const newUrl = prompt('กรุณาใส่ลิงก์รูปภาพโลโก้ใหม่ (URL รูปภาพที่ลงท้ายด้วย .png หรือ .jpg):', currentUrl);
+            
+            if (newUrl && newUrl !== currentUrl) {
+                db.logoUrl = newUrl;
+                document.getElementById('dashboard-logo').src = newUrl;
+                
+                if (typeof google !== 'undefined') {
+                    showLoading('กำลังบันทึกโลโก้...');
+                    google.script.run
+                        .withSuccessHandler(function(res) {
+                            hideLoading();
+                            showToast('✅ อัปเดตโลโก้สำเร็จ');
+                        })
+                        .withFailureHandler(function(err) {
+                            hideLoading();
+                            showToast('❌ อัปเดตโลโก้ล้มเหลว');
+                        })
+                        .updateSetting('LogoUrl', newUrl, currentUser);
+                } else {
+                    showToast('Offline Mode: จำลองการอัปเดตโลโก้');
+                }
+            }
         }
     </script>
 </body>
