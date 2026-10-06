@@ -20,7 +20,6 @@
         .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); }
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-        /* Loader Spinner */
         .spinner { border: 4px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 4px solid #fff; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -57,26 +56,24 @@
                 เข้าสู่ระบบ
             </button>
             <div class="mt-4 text-center text-[10px] text-gray-400">
-                Admin: Admin/1234 | User: user/4321
+                Admin: admin/1234 | User: user/4321
             </div>
         </form>
     </div>
 
-    <!-- 2. Main App Container (Hidden by default) -->
+    <!-- 2. Main App Container -->
     <div id="app-container" class="hidden max-w-md mx-auto bg-gray-50 h-[100dvh] relative shadow-2xl flex-col overflow-hidden border-x border-gray-200">
         
         <!-- Header -->
         <header class="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-4 flex justify-between items-center shadow-md shrink-0 z-20">
             <div>
                 <h1 class="text-xl font-bold tracking-wide"><i class="fa-solid fa-crab text-orange-300 mr-2"></i>ธนาคารปูม้า</h1>
-                <p class="text-[10px] text-blue-100 opacity-90">ผู้ใช้งาน: <span id="lbl-current-user" class="font-bold"></span></p>
+                <p class="text-[10px] text-blue-100 opacity-90">ผู้ใช้งาน: <span id="lbl-current-user" class="font-bold"></span> <span id="mode-badge" class="ml-1 px-1.5 py-0.5 rounded text-[8px] bg-amber-500 text-white">Offline</span></p>
             </div>
             <div class="flex items-center">
-                <!-- Sync/Refresh Button -->
-                <button onclick="refreshData()" class="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors shadow-sm" title="รีเฟรชข้อมูลจากระบบ">
+                <button onclick="refreshData()" class="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors shadow-sm" title="ซิงค์ข้อมูล">
                     <i class="fa-solid fa-rotate" id="sync-icon"></i>
                 </button>
-                <!-- Logout Button -->
                 <button onclick="handleLogout()" class="w-9 h-9 bg-red-500/80 hover:bg-red-600 rounded-full flex items-center justify-center text-white transition-colors shadow-sm ml-2" title="ออกจากระบบ">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
@@ -85,7 +82,7 @@
 
         <!-- Main Content Area -->
         <main class="flex-1 overflow-y-auto w-full relative z-10 pb-24" id="main-content">
-            <!-- Views dynamically injected here -->
+            <!-- Dynamic views -->
         </main>
 
         <!-- Bottom Navigation -->
@@ -110,9 +107,9 @@
         <!-- Add Member Modal -->
         <div id="modal-add-member" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
             <div class="modal-overlay absolute inset-0" onclick="closeModal('modal-add-member')"></div>
-            <div class="bg-white rounded-2xl w-full max-w-sm relative z-10 shadow-xl overflow-hidden animate-[slideUp_0.3s_ease-out]">
+            <div class="bg-white rounded-2xl w-full max-w-sm relative z-10 shadow-xl overflow-hidden">
                 <div class="bg-blue-600 px-4 py-3 flex justify-between items-center text-white">
-                    <h3 class="font-bold">เพิ่มสมาชิกระบบธนาคารปู</h3>
+                    <h3 class="font-bold text-sm">เพิ่มสมาชิกระบบธนาคารปู</h3>
                     <button onclick="closeModal('modal-add-member')" class="text-white/80 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
                 </div>
                 <form onsubmit="handleAddMember(event)" class="p-5">
@@ -153,7 +150,7 @@
 
     <script>
         // ==========================================
-        // 1. STATE & AUTHENTICATION
+        // STATE & INITIALIZATION
         // ==========================================
         let currentUser = null;
         let currentRole = null; // 'admin' or 'user'
@@ -163,6 +160,25 @@
         let currentSelectedYear = 2026;
         let currentChartMode = 'monthly'; 
         let barChartInstance, donutChartInstance, purchaseDonutChartInstance = null;
+        let currentTab = 'dashboard';
+        let isOnlineMode = false;
+
+        // โหลดข้อมูลจาก LocalStorage ทันทีเผื่อเปิดบน GitHub Pages (Offline / Standalone Mode)
+        function loadLocalStorage() {
+            const saved = localStorage.getItem('crab_bank_db_v1');
+            if (saved) {
+                try {
+                    db = JSON.parse(saved);
+                } catch(e) {}
+            } else {
+                db = getMockData();
+                saveLocalStorage();
+            }
+        }
+
+        function saveLocalStorage() {
+            localStorage.setItem('crab_bank_db_v1', JSON.stringify(db));
+        }
 
         function showLoading(text = 'กำลังโหลด...') {
             document.getElementById('loading-text').innerText = text;
@@ -182,42 +198,33 @@
             setTimeout(() => toast.classList.add('opacity-0'), 3000);
         }
 
-        // ระบบ Login
+        // Login System (รองรับพิมพ์เล็ก/ใหญ่)
         function handleLogin(e) {
             e.preventDefault();
-            const user = document.getElementById('login-user').value.trim();
+            const user = document.getElementById('login-user').value.trim().toLowerCase();
             const pass = document.getElementById('login-pass').value.trim();
 
-            // ปรับให้เป็น toLowerCase() เพื่อให้พิมพ์ Admin หรือ admin ก็เข้าได้
-            if (user.toLowerCase() === 'admin' && pass === '1234') {
-                currentUser = 'Admin'; currentRole = 'admin';
-            } else if (user.toLowerCase() === 'user' && pass === '4321') {
-                currentUser = 'User (Staff)'; currentRole = 'user';
+            if (user === 'admin' && pass === '1234') {
+                currentUser = 'Admin'; 
+                currentRole = 'admin';
+            } else if (user === 'user' && pass === '4321') {
+                currentUser = 'User (Staff)'; 
+                currentRole = 'user';
             } else {
                 showToast('❌ Username หรือ Password ไม่ถูกต้อง');
                 return;
             }
 
-            // เข้าสู่ระบบสำเร็จ
             document.getElementById('lbl-current-user').innerText = currentUser;
             document.getElementById('login-container').classList.add('hidden');
             document.getElementById('app-container').classList.remove('hidden');
             document.getElementById('app-container').classList.add('flex');
             
-            // บันทึก Log การเข้าสู่ระบบ
-            if (typeof google !== 'undefined') {
-                google.script.run.logEvent(currentUser, 'Login', 'เข้าสู่ระบบสำเร็จ');
-            }
-            
-            // โหลดข้อมูลจาก Google Sheets
+            loadLocalStorage();
             refreshData();
         }
 
-        // ระบบ Logout
         function handleLogout() {
-            if (typeof google !== 'undefined' && currentUser) {
-                google.script.run.logEvent(currentUser, 'Logout', 'ออกจากระบบ');
-            }
             currentUser = null;
             currentRole = null;
             document.getElementById('login-user').value = '';
@@ -229,80 +236,106 @@
         }
 
         // ==========================================
-        // 2. GOOGLE APPS SCRIPT INTEGRATION
+        // DATA SYNC & STORAGE (Hybrid: Google Sheets / LocalStorage)
         // ==========================================
         function refreshData() {
-            if (typeof google === 'undefined') {
-                // หากรันนอก GAS (ใช้ข้อมูลจำลองชั่วคราวเพื่อเทส UI)
-                showToast('กำลังใช้งานแบบ Offline Mode (Mock Data)');
-                db = getMockData();
-                switchTab('dashboard');
-                return;
-            }
-
             const icon = document.getElementById('sync-icon');
-            icon.classList.add('fa-spin');
-            showLoading('กำลังซิงค์ข้อมูลล่าสุด...');
+            if(icon) icon.classList.add('fa-spin');
+            showLoading('กำลังซิงค์ข้อมูล...');
 
-            google.script.run
-                .withSuccessHandler(function(response) {
+            // เช็คว่ารันบน Google Apps Script หรือไม่
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        hideLoading();
+                        if(icon) icon.classList.remove('fa-spin');
+                        const res = JSON.parse(response);
+                        if(res.status === 'success') {
+                            db = res.data;
+                            saveLocalStorage();
+                            isOnlineMode = true;
+                            document.getElementById('mode-badge').innerText = 'Online (Sheet)';
+                            document.getElementById('mode-badge').className = 'ml-1 px-1.5 py-0.5 rounded text-[8px] bg-green-500 text-white';
+                            showToast('ซิงค์ข้อมูลจาก Google Sheets สำเร็จ');
+                            switchTab(currentTab);
+                        } else {
+                            useOfflineFallback('ข้อผิดพลาดจาก Server');
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        useOfflineFallback('ไม่สามารถเชื่อมต่อ Sheet ได้');
+                    })
+                    .getAllData();
+            } else {
+                // รันผ่าน GitHub Pages หรือเปิดไฟล์ HTML โดยตรง (Offline Standalone Mode)
+                setTimeout(() => {
                     hideLoading();
-                    icon.classList.remove('fa-spin');
-                    const res = JSON.parse(response);
-                    if(res.status === 'success') {
-                        db = res.data;
-                        showToast('อัปเดตข้อมูลสำเร็จ');
-                        switchTab(currentTab || 'dashboard');
-                    } else {
-                        showToast('❌ ข้อผิดพลาด: ' + res.message);
-                    }
-                })
-                .withFailureHandler(function(error) {
-                    hideLoading();
-                    icon.classList.remove('fa-spin');
-                    showToast('❌ การเชื่อมต่อล้มเหลว');
-                })
-                .getAllData();
+                    if(icon) icon.classList.remove('fa-spin');
+                    isOnlineMode = false;
+                    document.getElementById('mode-badge').innerText = 'Offline (Local)';
+                    document.getElementById('mode-badge').className = 'ml-1 px-1.5 py-0.5 rounded text-[8px] bg-amber-500 text-white';
+                    switchTab(currentTab);
+                }, 400);
+            }
         }
 
-        function pushDataToSheet(sheetName, rowArray, actionDetail, successMsg, callback) {
-            if (typeof google === 'undefined') {
-                showToast('Offline Mode: จำลองการบันทึกสำเร็จ');
-                if(callback) callback();
-                return;
-            }
+        function useOfflineFallback(msg) {
+            hideLoading();
+            const icon = document.getElementById('sync-icon');
+            if(icon) icon.classList.remove('fa-spin');
+            isOnlineMode = false;
+            document.getElementById('mode-badge').innerText = 'Offline Mode';
+            document.getElementById('mode-badge').className = 'ml-1 px-1.5 py-0.5 rounded text-[8px] bg-amber-500 text-white';
+            loadLocalStorage();
+            switchTab(currentTab);
+        }
 
-            showLoading('กำลังบันทึกข้อมูล...');
-            google.script.run
-                .withSuccessHandler(function(response) {
-                    hideLoading();
-                    const res = JSON.parse(response);
-                    if(res.status === 'success') {
+        function saveDataToStorageOrSheet(sheetName, rowArray, actionDetail, successMsg, callback) {
+            // บันทึกลง LocalStorage ก่อนเสมอเพื่อให้เว็บใช้งานได้ทันที (รองรับ GitHub Pages)
+            if (sheetName === 'Member_Registry') {
+                db.members.push({ id: rowArray[0], name: rowArray[1], phone: rowArray[2], area: rowArray[3], points: rowArray[4] });
+            } else if (sheetName === 'Deposit_Log') {
+                db.deposits.push({ txnId: rowArray[0], date: rowArray[1], memberId: rowArray[2], crabs: rowArray[3], weight: rowArray[4], eggColor: rowArray[5], estHatchDate: rowArray[6], status: rowArray[7] });
+            } else if (sheetName === 'Release_Log') {
+                db.releases.push({ date: rowArray[0], txnId: rowArray[1], crabs: rowArray[2], rate: rowArray[3], zoeaReleased: rowArray[4], location: rowArray[5] });
+                let dep = db.deposits.find(d => d.txnId === rowArray[1]);
+                if(dep) dep.status = 'ปล่อยแล้ว';
+            } else if (sheetName === 'Purchase_Log') {
+                db.purchases.push({ txnId: rowArray[0], date: rowArray[1], memberId: rowArray[2], weightM: rowArray[3], priceM: rowArray[4], weightL: rowArray[5], priceL: rowArray[6], totalAmt: rowArray[7] });
+            }
+            saveLocalStorage();
+
+            // หากต่อ Google Apps Script ได้ ให้ส่งข้อมูลไปอัปเดตบน Sheet ด้วย
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                showLoading('กำลังบันทึกไปยัง Google Sheets...');
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        hideLoading();
                         showToast('✅ ' + successMsg);
-                        // ดึงข้อมูลใหม่หลังจากบันทึกเสร็จ เพื่อให้ UI อัปเดตทันที
-                        refreshData(); 
                         if(callback) callback();
-                    } else {
-                        showToast('❌ เกิดข้อผิดพลาด: ' + res.message);
-                    }
-                })
-                .withFailureHandler(function(error) {
-                    hideLoading();
-                    showToast('❌ เชื่อมต่อล้มเหลว ลองใหม่อีกครั้ง');
-                })
-                .addRecord(sheetName, rowArray, currentUser, actionDetail);
+                    })
+                    .withFailureHandler(function(error) {
+                        hideLoading();
+                        showToast('⚠️ บันทึกในเครื่องสำเร็จ (แต่ Sheet ออฟไลน์)');
+                        if(callback) callback();
+                    })
+                    .addRecord(sheetName, rowArray, currentUser, actionDetail);
+            } else {
+                showToast('✅ ' + successMsg);
+                if(callback) callback();
+            }
         }
 
         // ==========================================
-        // 3. UI RENDERING & NAVIGATION
+        // NAVIGATION & VIEWS
         // ==========================================
         const mainContent = document.getElementById('main-content');
-        let currentTab = 'dashboard';
 
         function switchTab(tabId) {
             currentTab = tabId;
             ['dashboard', 'deposit', 'release', 'purchase', 'members'].forEach(id => {
                 const el = document.getElementById(`nav-${id}`);
+                if (!el) return;
                 if (id === tabId) {
                     el.classList.replace('text-gray-400', 'text-blue-600');
                     el.classList.add('bg-blue-50');
@@ -323,10 +356,7 @@
             if (tabId === 'members') renderMembers();
         }
 
-        // --- โค้ด Dashboard, Deposit, Release, Purchase จะเหมือนเดิม โดยปรับแก้การเรียก submit ---
-        
         function renderDashboard() {
-            // คำนวณปีจากข้อมูลที่มี
             const yearsSet = new Set(db.deposits.map(d => {
                 let dt = new Date(d.date); return isNaN(dt)? 2026 : dt.getFullYear();
             }));
@@ -340,7 +370,6 @@
 
             mainContent.innerHTML = `
                 <div class="p-4 space-y-4 pb-10">
-                    <!-- โลโก้โครงการ -->
                     <div class="flex justify-center relative group pt-2 pb-2">
                         <div class="relative inline-block">
                             <img src="${db.logoUrl || 'https://cdn-icons-png.flaticon.com/512/3060/3060265.png'}" id="dashboard-logo" class="h-24 w-24 object-contain rounded-2xl bg-white p-2 shadow-md border border-gray-100 transition-transform duration-300">
@@ -424,24 +453,31 @@
         function setChartMode(mode) {
             currentChartMode = mode;
             ['daily', 'monthly', 'yearly'].forEach(m => {
-                document.getElementById(`mode-${m}`).className = m === mode ? 'px-2 py-1 rounded-md font-medium bg-white text-blue-600 shadow-sm' : 'px-2 py-1 rounded-md font-medium text-gray-500';
+                const btn = document.getElementById(`mode-${m}`);
+                if (btn) {
+                    btn.className = m === mode ? 'px-2 py-1 rounded-md font-medium bg-white text-blue-600 shadow-sm' : 'px-2 py-1 rounded-md font-medium text-gray-500';
+                }
             });
             updateDashboardData();
         }
 
         function updateDashboardData() {
-            if(document.getElementById('dash-year-filter')) currentSelectedYear = parseInt(document.getElementById('dash-year-filter').value);
-            document.getElementById('lbl-year-zoea').innerText = currentSelectedYear + 543;
+            const yearFilter = document.getElementById('dash-year-filter');
+            if(yearFilter) currentSelectedYear = parseInt(yearFilter.value);
+            const lblZoea = document.getElementById('lbl-year-zoea');
+            if(lblZoea) lblZoea.innerText = currentSelectedYear + 543;
 
             const yearlyReleases = db.releases.filter(r => new Date(r.date).getFullYear() === currentSelectedYear);
             const totalZoea = yearlyReleases.reduce((s, r) => s + (parseInt(r.zoeaReleased)||0), 0);
             const progressPct = Math.min((totalZoea / 10000000) * 100, 100);
             
-            document.getElementById('kpi-zoea').innerHTML = `${totalZoea.toLocaleString()} <span class="text-base font-normal">ตัว</span>`;
-            document.getElementById('kpi-progress-pct').innerText = `${progressPct.toFixed(1)}%`;
-            document.getElementById('kpi-progress-bar').style.width = `${progressPct}%`;
+            const kpiZoea = document.getElementById('kpi-zoea');
+            if(kpiZoea) kpiZoea.innerHTML = `${totalZoea.toLocaleString()} <span class="text-base font-normal">ตัว</span>`;
+            const kpiPct = document.getElementById('kpi-progress-pct');
+            if(kpiPct) kpiPct.innerText = `${progressPct.toFixed(1)}%`;
+            const kpiBar = document.getElementById('kpi-progress-bar');
+            if(kpiBar) kpiBar.style.width = `${progressPct}%`;
 
-            // Bar Chart Update
             const yearlyDeposits = db.deposits.filter(d => new Date(d.date).getFullYear() === currentSelectedYear);
             let labels = [], chartData = [];
             if (currentChartMode === 'monthly') {
@@ -461,17 +497,19 @@
                 labels = Object.keys(dateMap).sort().map(d => d.substring(5));
                 chartData = Object.keys(dateMap).sort().map(d => dateMap[d]);
             }
-            barChartInstance.data.labels = labels;
-            barChartInstance.data.datasets = [{ data: chartData, backgroundColor: '#3b82f6', borderRadius: 4 }];
-            barChartInstance.update();
+            if (barChartInstance) {
+                barChartInstance.data.labels = labels;
+                barChartInstance.data.datasets = [{ data: chartData, backgroundColor: '#3b82f6', borderRadius: 4 }];
+                barChartInstance.update();
+            }
 
-            // Egg Donut
             let colorCounts = { 'เหลือง': 0, 'ส้ม': 0, 'ดำ': 0 };
             yearlyDeposits.forEach(d => { if(colorCounts[d.eggColor] !== undefined) colorCounts[d.eggColor] += parseInt(d.crabs)||0; });
-            donutChartInstance.data.datasets = [{ data: [colorCounts['เหลือง'], colorCounts['ส้ม'], colorCounts['ดำ']], backgroundColor: ['#facc15', '#f97316', '#1f2937'] }];
-            donutChartInstance.update();
+            if (donutChartInstance) {
+                donutChartInstance.data.datasets = [{ data: [colorCounts['เหลือง'], colorCounts['ส้ม'], colorCounts['ดำ']], backgroundColor: ['#facc15', '#f97316', '#1f2937'] }];
+                donutChartInstance.update();
+            }
 
-            // Purchase Logic
             const yearlyPurchases = db.purchases.filter(p => new Date(p.date).getFullYear() === currentSelectedYear);
             let tM = 0, tL = 0, amtYr = 0, amtMo = 0, currMo = new Date().getMonth();
             yearlyPurchases.forEach(p => {
@@ -480,10 +518,14 @@
                 if(new Date(p.date).getMonth() === currMo) amtMo += parseFloat(p.totalAmt)||0;
             });
             
-            document.getElementById('kpi-pur-year').innerText = '฿' + amtYr.toLocaleString();
-            document.getElementById('kpi-pur-month').innerText = '฿' + amtMo.toLocaleString();
-            purchaseDonutChartInstance.data.datasets = [{ data: [tM, tL], backgroundColor: ['#6366f1', '#a855f7'] }];
-            purchaseDonutChartInstance.update();
+            const purYr = document.getElementById('kpi-pur-year');
+            if(purYr) purYr.innerText = '฿' + amtYr.toLocaleString();
+            const purMo = document.getElementById('kpi-pur-month');
+            if(purMo) purMo.innerText = '฿' + amtMo.toLocaleString();
+            if (purchaseDonutChartInstance) {
+                purchaseDonutChartInstance.data.datasets = [{ data: [tM, tL], backgroundColor: ['#6366f1', '#a855f7'] }];
+                purchaseDonutChartInstance.update();
+            }
         }
 
         function getToday() { return new Date().toISOString().split('T')[0]; }
@@ -494,7 +536,6 @@
                 <div class="p-4 pb-10">
                     <form onsubmit="handleDepositSubmit(event)" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
                         <h2 class="text-base font-bold text-gray-800 mb-4"><i class="fa-solid fa-box-archive text-blue-500 mr-2"></i>รับฝากแม่ปู</h2>
-                        
                         <div class="mb-4">
                             <label class="block text-xs font-medium text-gray-600 mb-1">วันที่รับฝาก</label>
                             <input type="date" id="dep-date" value="${getToday()}" required class="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none">
@@ -597,18 +638,18 @@
         function calcPur() {
             let m = (parseFloat(document.getElementById('p-w-m').value)||0) * (parseFloat(document.getElementById('p-p-m').value)||0);
             let l = (parseFloat(document.getElementById('p-w-l').value)||0) * (parseFloat(document.getElementById('p-p-l').value)||0);
-            document.getElementById('pur-tot').innerText = (m+l).toLocaleString();
+            const purTot = document.getElementById('pur-tot');
+            if(purTot) purTot.innerText = (m+l).toLocaleString();
         }
 
         function renderMembers() {
             let html = db.members.map(m => `
-                <div class="bg-white rounded-xl shadow-sm border p-3 mb-2 flex justify-between">
-                    <div><div class="font-bold text-sm">${m.name}</div><div class="text-[10px] text-gray-500">${m.id} | ${m.area}</div></div>
-                    <div class="text-right text-orange-500 font-bold">${m.points} pt</div>
+                <div class="bg-white rounded-xl shadow-sm border p-3 mb-2 flex justify-between items-center">
+                    <div><div class="font-bold text-sm">${m.name}</div><div class="text-[10px] text-gray-500">${m.id} | ${m.area} | โทร: ${m.phone}</div></div>
+                    <div class="text-right text-orange-500 font-bold">${m.points||0} pt</div>
                 </div>
             `).join('');
             
-            // Check Role
             let btnHtml = '';
             if (currentRole === 'admin') {
                 btnHtml = `<button onclick="document.getElementById('modal-add-member').classList.remove('hidden')" class="w-full bg-white border-2 border-dashed border-blue-300 text-blue-600 font-bold py-3 rounded-xl mt-4"><i class="fa-solid fa-user-plus mr-2"></i> ลงทะเบียนสมาชิกใหม่</button>`;
@@ -619,54 +660,44 @@
             mainContent.innerHTML = `<div class="p-4 pb-10"><h2 class="text-base font-bold mb-4">สมาชิกชาวประมง (${db.members.length}/300)</h2>${html}${btnHtml}</div>`;
         }
 
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function closeModal(id) { 
+            const el = document.getElementById(id);
+            if(el) el.classList.add('hidden'); 
+        }
 
         // ==========================================
-        // 4. DATA SUBMISSION LOGIC (Send to GAS)
+        // FORM SUBMISSIONS
         // ==========================================
-        
         function handleAddMember(e) {
             e.preventDefault();
             if (db.members.length >= MAX_MEMBERS) { showToast('สมาชิกเต็ม 300 คนแล้ว'); return; }
             const id = 'F' + (db.members.length + 1).toString().padStart(3, '0');
             
-            const name = document.getElementById('new-member-name').value;
-            const phone = document.getElementById('new-member-phone').value;
+            const name = document.getElementById('new-member-name').value.trim();
+            const phone = document.getElementById('new-member-phone').value.trim();
             const area = document.getElementById('new-member-area').value;
             
-            const row = [
-                id, 
-                name,
-                phone,
-                area,
-                0 // Points
-            ];
+            const row = [ id, name, phone, area, 0 ];
             
             closeModal('modal-add-member');
-            
-            // ล้างข้อมูลในฟอร์มหลังจากกดบันทึก
             document.getElementById('new-member-name').value = '';
             document.getElementById('new-member-phone').value = '';
-            document.getElementById('new-member-area').value = 'สะพลี';
 
-            // จัดการกรณี Offline Mode ให้ข้อมูลอัปเดตบนหน้าจอทันที
-            if (typeof google === 'undefined') {
-                db.members.push({ id: id, name: name, phone: phone, area: area, points: 0 });
-                showToast('Offline Mode: เพิ่มสมาชิกจำลองสำเร็จ');
-                renderMembers(); // สั่งให้วาดหน้าสมาชิกใหม่
-                return;
-            }
-
-            // กรณีใช้งานบน Google Apps Script จริง
-            pushDataToSheet('Member_Registry', row, `Added member ${id}`, 'เพิ่มสมาชิกสำเร็จ');
+            saveDataToStorageOrSheet('Member_Registry', row, `Added member ${id}`, 'เพิ่มสมาชิกสำเร็จ', function() {
+                renderMembers();
+            });
         }
 
         function handleDepositSubmit(e) {
             e.preventDefault();
             const date = document.getElementById('dep-date').value;
             const txn = 'TXN-' + Date.now().toString().slice(-6);
-            const color = document.querySelector('input[name="dep-color"]:checked').value;
-            let hDate = new Date(date); hDate.setDate(hDate.getDate() + (color==='ดำ'?2:color==='ส้ม'?5:10));
+            const colorEl = document.querySelector('input[name="dep-color"]:checked');
+            if(!colorEl) { showToast('กรุณาเลือกสีไข่ปู'); return; }
+            const color = colorEl.value;
+            
+            let hDate = new Date(date); 
+            hDate.setDate(hDate.getDate() + (color==='ดำ'?2:color==='ส้ม'?5:10));
             
             const row = [
                 txn,
@@ -678,7 +709,10 @@
                 hDate.toISOString().split('T')[0],
                 'กำลังฟัก'
             ];
-            pushDataToSheet('Deposit_Log', row, `Deposit ${txn}`, 'บันทึกการรับฝากสำเร็จ');
+
+            saveDataToStorageOrSheet('Deposit_Log', row, `Deposit ${txn}`, 'บันทึกการรับฝากสำเร็จ', function() {
+                switchTab('dashboard');
+            });
         }
 
         function handleReleaseSubmit(e) {
@@ -688,10 +722,11 @@
             const rate = document.getElementById('rel-rate').value;
             const zoea = Math.floor(crabs * 500000 * (rate / 100));
             
-            const row = [
-                getToday(), txn, crabs, rate, zoea, document.getElementById('rel-loc').value
-            ];
-            pushDataToSheet('Release_Log', row, `Release for ${txn}`, 'บันทึกการปล่อยสำเร็จ');
+            const row = [ getToday(), txn, crabs, rate, zoea, document.getElementById('rel-loc').value ];
+
+            saveDataToStorageOrSheet('Release_Log', row, `Release for ${txn}`, 'บันทึกการปล่อยสำเร็จ', function() {
+                switchTab('dashboard');
+            });
         }
 
         function handlePurchaseSubmit(e) {
@@ -705,47 +740,46 @@
             
             if(tot <= 0) { showToast('กรุณาระบุข้อมูลการรับซื้อ'); return; }
             
-            const row = [
-                txn, getToday(), document.getElementById('pur-member').value, wm, pm, wl, pl, tot
-            ];
-            pushDataToSheet('Purchase_Log', row, `Purchase ${txn}`, 'บันทึกการรับซื้อสำเร็จ');
+            const row = [ txn, getToday(), document.getElementById('pur-member').value, wm, pm, wl, pl, tot ];
+
+            saveDataToStorageOrSheet('Purchase_Log', row, `Purchase ${txn}`, 'บันทึกการรับซื้อสำเร็จ', function() {
+                switchTab('dashboard');
+            });
         }
 
-        // Mock Data for offline testing
         function getMockData() {
             return {
-                members: [{ id: 'F001', name: 'สมชาย รักษ์ทะเล', phone: '0811111111', area: 'สะพลี', points: 50 }],
-                deposits: [{ txnId: 'TXN-0001', date: '2026-10-01', memberId: 'F001', crabs: 15, weight: 3.2, eggColor: 'เหลือง', estHatchDate: '2026-10-11', status: 'กำลังฟัก' }],
-                releases: [],
-                purchases: [{ txnId: 'PUR-0001', date: '2026-10-02', memberId: 'F001', weightM: 2.5, priceM: 250, weightL: 1.0, priceL: 350, totalAmt: 975 }],
+                members: [
+                    { id: 'F001', name: 'สมชาย รักษ์ทะเล', phone: '0811111111', area: 'สะพลี', points: 50 },
+                    { id: 'F002', name: 'วิชัย ชาวประมง', phone: '0822222222', area: 'ปากน้ำปราณ', points: 30 }
+                ],
+                deposits: [
+                    { txnId: 'TXN-0001', date: '2026-10-01', memberId: 'F001', crabs: 15, weight: 3.2, eggColor: 'เหลือง', estHatchDate: '2026-10-11', status: 'กำลังฟัก' }
+                ],
+                releases: [
+                    { date: '2026-10-05', txnId: 'TXN-0000', crabs: 10, rate: 80, zoeaReleased: 4000000, location: '12.345, 99.876' }
+                ],
+                purchases: [
+                    { txnId: 'PUR-0001', date: '2026-10-02', memberId: 'F001', weightM: 2.5, priceM: 250, weightL: 1.0, priceL: 350, totalAmt: 975 }
+                ],
                 logoUrl: 'https://cdn-icons-png.flaticon.com/512/3060/3060265.png'
             };
         }
 
-        // เปลี่ยนรูป Logo (เฉพาะ Admin)
         function changeLogo() {
             const currentUrl = db.logoUrl || '';
             const newUrl = prompt('กรุณาใส่ลิงก์รูปภาพโลโก้ใหม่ (URL รูปภาพที่ลงท้ายด้วย .png หรือ .jpg):', currentUrl);
             
             if (newUrl && newUrl !== currentUrl) {
                 db.logoUrl = newUrl;
-                document.getElementById('dashboard-logo').src = newUrl;
+                saveLocalStorage();
+                const logoImg = document.getElementById('dashboard-logo');
+                if(logoImg) logoImg.src = newUrl;
                 
-                if (typeof google !== 'undefined') {
-                    showLoading('กำลังบันทึกโลโก้...');
-                    google.script.run
-                        .withSuccessHandler(function(res) {
-                            hideLoading();
-                            showToast('✅ อัปเดตโลโก้สำเร็จ');
-                        })
-                        .withFailureHandler(function(err) {
-                            hideLoading();
-                            showToast('❌ อัปเดตโลโก้ล้มเหลว');
-                        })
-                        .updateSetting('LogoUrl', newUrl, currentUser);
-                } else {
-                    showToast('Offline Mode: จำลองการอัปเดตโลโก้');
+                if (typeof google !== 'undefined' && google.script && google.script.run) {
+                    google.script.run.updateSetting('LogoUrl', newUrl, currentUser);
                 }
+                showToast('✅ อัปเดตโลโก้สำเร็จ');
             }
         }
     </script>
