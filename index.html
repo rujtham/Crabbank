@@ -24,70 +24,32 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="text-gray-800 antialiased overflow-hidden">
+<body class="text-gray-800 antialiased overflow-hidden flex justify-center items-center h-[100dvh]">
 
-    <!-- 1. Login Screen -->
-    <div id="login-container" class="max-w-md mx-auto bg-gradient-to-br from-blue-700 to-blue-900 h-[100dvh] relative flex flex-col justify-center items-center p-6 z-[100]">
-        <div class="text-center mb-8">
-            <div class="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm border border-white/20 shadow-xl">
-                <i class="fa-solid fa-crab text-5xl text-orange-400"></i>
-            </div>
-            <h1 class="text-2xl font-bold text-white tracking-wide mb-1">ธนาคารปูม้า</h1>
-            <p class="text-xs text-blue-200">ESG & SROI Management System</p>
-        </div>
-        
-        <form onsubmit="handleLogin(event)" class="w-full bg-white rounded-2xl p-6 shadow-2xl">
-            <h2 class="text-gray-800 font-bold mb-4 text-center">เข้าสู่ระบบ</h2>
-            <div class="mb-4">
-                <label class="block text-xs font-medium text-gray-500 mb-1">ชื่อผู้ใช้งาน (Username)</label>
-                <div class="relative">
-                    <i class="fa-solid fa-user absolute left-3 top-3 text-gray-400"></i>
-                    <input type="text" id="login-user" required class="w-full border border-gray-300 rounded-xl py-2.5 pl-10 pr-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
-                </div>
-            </div>
-            <div class="mb-6">
-                <label class="block text-xs font-medium text-gray-500 mb-1">รหัสผ่าน (Password)</label>
-                <div class="relative">
-                    <i class="fa-solid fa-lock absolute left-3 top-3 text-gray-400"></i>
-                    <input type="password" id="login-pass" required class="w-full border border-gray-300 rounded-xl py-2.5 pl-10 pr-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
-                </div>
-            </div>
-            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-700 transition-colors">
-                เข้าสู่ระบบ
-            </button>
-            <div class="mt-4 text-center text-[10px] text-gray-400">
-                Admin: admin/1234 | User: user/4321
-            </div>
-        </form>
-    </div>
-
-    <!-- 2. Main App Container -->
-    <div id="app-container" class="hidden max-w-md mx-auto bg-gray-50 h-[100dvh] relative shadow-2xl flex-col overflow-hidden border-x border-gray-200">
+    <!-- Main App Container (Mobile-First Frame) -->
+    <div id="app-container" class="w-full max-w-md mx-auto bg-gray-50 h-[100dvh] relative shadow-2xl flex flex-col overflow-hidden border-x border-gray-200">
         
         <!-- Header -->
         <header class="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-4 flex justify-between items-center shadow-md shrink-0 z-20">
             <div>
                 <h1 class="text-xl font-bold tracking-wide"><i class="fa-solid fa-crab text-orange-300 mr-2"></i>ธนาคารปูม้า</h1>
-                <p class="text-[10px] text-blue-100 opacity-90">ผู้ใช้งาน: <span id="lbl-current-user" class="font-bold"></span> <span id="mode-badge" class="ml-1 px-1.5 py-0.5 rounded text-[8px] bg-amber-500 text-white">Offline</span></p>
+                <p class="text-[10px] text-blue-100 opacity-90">ระบบจัดการ ESG & SROI | สถานะ: <span id="mode-badge" class="px-1.5 py-0.5 rounded text-[8px] bg-amber-500 text-white font-bold">Offline Mode</span></p>
             </div>
-            <div class="flex items-center">
+            <div class="flex items-center space-x-2">
                 <button onclick="refreshData()" class="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors shadow-sm" title="ซิงค์ข้อมูล">
                     <i class="fa-solid fa-rotate" id="sync-icon"></i>
-                </button>
-                <button onclick="handleLogout()" class="w-9 h-9 bg-red-500/80 hover:bg-red-600 rounded-full flex items-center justify-center text-white transition-colors shadow-sm ml-2" title="ออกจากระบบ">
-                    <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
             </div>
         </header>
 
         <!-- Main Content Area -->
         <main class="flex-1 overflow-y-auto w-full relative z-10 pb-24" id="main-content">
-            <!-- Dynamic views -->
+            <!-- Dynamic views injected here -->
         </main>
 
         <!-- Bottom Navigation -->
         <nav class="bg-white border-t border-gray-200 absolute bottom-0 w-full flex justify-between px-1 py-2 pb-safe shadow-[0_-4px_15px_rgba(0,0,0,0.05)] z-50">
-            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center text-blue-600 w-1/5 p-1 transition-colors rounded-xl">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center text-blue-600 w-1/5 p-1 transition-colors rounded-xl bg-blue-50">
                 <i class="fa-solid fa-chart-pie text-[18px] mb-1"></i><span class="text-[9px] font-medium">ภาพรวม</span>
             </button>
             <button onclick="switchTab('deposit')" id="nav-deposit" class="flex flex-col items-center text-gray-400 w-1/5 p-1 transition-colors rounded-xl">
@@ -149,13 +111,7 @@
     </div>
 
     <script>
-        // ==========================================
-        // STATE & INITIALIZATION
-        // ==========================================
-        let currentUser = null;
-        let currentRole = null; // 'admin' or 'user'
         const MAX_MEMBERS = 300;
-        
         let db = { members: [], deposits: [], releases: [], purchases: [], logoUrl: 'https://cdn-icons-png.flaticon.com/512/3060/3060265.png' };
         let currentSelectedYear = 2026;
         let currentChartMode = 'monthly'; 
@@ -163,9 +119,14 @@
         let currentTab = 'dashboard';
         let isOnlineMode = false;
 
-        // โหลดข้อมูลจาก LocalStorage ทันทีเผื่อเปิดบน GitHub Pages (Offline / Standalone Mode)
+        // Load data on startup
+        window.onload = function() {
+            loadLocalStorage();
+            refreshData();
+        };
+
         function loadLocalStorage() {
-            const saved = localStorage.getItem('crab_bank_db_v1');
+            const saved = localStorage.getItem('crab_bank_db_v2');
             if (saved) {
                 try {
                     db = JSON.parse(saved);
@@ -177,7 +138,7 @@
         }
 
         function saveLocalStorage() {
-            localStorage.setItem('crab_bank_db_v1', JSON.stringify(db));
+            localStorage.setItem('crab_bank_db_v2', JSON.stringify(db));
         }
 
         function showLoading(text = 'กำลังโหลด...') {
@@ -198,100 +159,56 @@
             setTimeout(() => toast.classList.add('opacity-0'), 3000);
         }
 
-        // Login System (รองรับพิมพ์เล็ก/ใหญ่)
-        function handleLogin(e) {
-            e.preventDefault();
-            const user = document.getElementById('login-user').value.trim().toLowerCase();
-            const pass = document.getElementById('login-pass').value.trim();
-
-            if (user === 'admin' && pass === '1234') {
-                currentUser = 'Admin'; 
-                currentRole = 'admin';
-            } else if (user === 'user' && pass === '4321') {
-                currentUser = 'User (Staff)'; 
-                currentRole = 'user';
-            } else {
-                showToast('❌ Username หรือ Password ไม่ถูกต้อง');
-                return;
-            }
-
-            document.getElementById('lbl-current-user').innerText = currentUser;
-            document.getElementById('login-container').classList.add('hidden');
-            document.getElementById('app-container').classList.remove('hidden');
-            document.getElementById('app-container').classList.add('flex');
-            
-            loadLocalStorage();
-            refreshData();
-        }
-
-        function handleLogout() {
-            currentUser = null;
-            currentRole = null;
-            document.getElementById('login-user').value = '';
-            document.getElementById('login-pass').value = '';
-            document.getElementById('app-container').classList.add('hidden');
-            document.getElementById('app-container').classList.remove('flex');
-            document.getElementById('login-container').classList.remove('hidden');
-            showToast('ออกจากระบบแล้ว');
-        }
-
-        // ==========================================
-        // DATA SYNC & STORAGE (Hybrid: Google Sheets / LocalStorage)
-        // ==========================================
         function refreshData() {
             const icon = document.getElementById('sync-icon');
             if(icon) icon.classList.add('fa-spin');
             showLoading('กำลังซิงค์ข้อมูล...');
 
-            // เช็คว่ารันบน Google Apps Script หรือไม่
             if (typeof google !== 'undefined' && google.script && google.script.run) {
                 google.script.run
                     .withSuccessHandler(function(response) {
                         hideLoading();
                         if(icon) icon.classList.remove('fa-spin');
-                        const res = JSON.parse(response);
-                        if(res.status === 'success') {
-                            db = res.data;
-                            saveLocalStorage();
-                            isOnlineMode = true;
-                            document.getElementById('mode-badge').innerText = 'Online (Sheet)';
-                            document.getElementById('mode-badge').className = 'ml-1 px-1.5 py-0.5 rounded text-[8px] bg-green-500 text-white';
-                            showToast('ซิงค์ข้อมูลจาก Google Sheets สำเร็จ');
-                            switchTab(currentTab);
-                        } else {
-                            useOfflineFallback('ข้อผิดพลาดจาก Server');
-                        }
+                        try {
+                            const res = JSON.parse(response);
+                            if(res.status === 'success') {
+                                db = res.data;
+                                saveLocalStorage();
+                                isOnlineMode = true;
+                                document.getElementById('mode-badgeinnerText', 'Online (Google Sheets)');
+                                document.getElementById('mode-badge').innerText = 'Online (Sheets)';
+                                document.getElementById('mode-badge').className = 'px-1.5 py-0.5 rounded text-[8px] bg-green-500 text-white font-bold';
+                                showToast('ซิงค์ข้อมูลจาก Google Sheets สำเร็จ');
+                                switchTab(currentTab);
+                                return;
+                            }
+                        } catch(e) {}
+                        useOfflineFallback();
                     })
                     .withFailureHandler(function(error) {
-                        useOfflineFallback('ไม่สามารถเชื่อมต่อ Sheet ได้');
+                        useOfflineFallback();
                     })
                     .getAllData();
             } else {
-                // รันผ่าน GitHub Pages หรือเปิดไฟล์ HTML โดยตรง (Offline Standalone Mode)
                 setTimeout(() => {
                     hideLoading();
                     if(icon) icon.classList.remove('fa-spin');
-                    isOnlineMode = false;
-                    document.getElementById('mode-badge').innerText = 'Offline (Local)';
-                    document.getElementById('mode-badge').className = 'ml-1 px-1.5 py-0.5 rounded text-[8px] bg-amber-500 text-white';
-                    switchTab(currentTab);
+                    useOfflineFallback();
                 }, 400);
             }
         }
 
-        function useOfflineFallback(msg) {
-            hideLoading();
-            const icon = document.getElementById('sync-icon');
-            if(icon) icon.classList.remove('fa-spin');
+        function useOfflineFallback() {
             isOnlineMode = false;
-            document.getElementById('mode-badge').innerText = 'Offline Mode';
-            document.getElementById('mode-badge').className = 'ml-1 px-1.5 py-0.5 rounded text-[8px] bg-amber-500 text-white';
+            document.getElementById('mode-badge').innerText = 'GitHub / Offline Mode';
+            document.getElementById('mode-badge').className = 'px-1.5 py-0.5 rounded text-[8px] bg-amber-500 text-white font-bold';
             loadLocalStorage();
             switchTab(currentTab);
+            showToast('ใช้งานในโหมด Local / GitHub Pages');
         }
 
-        function saveDataToStorageOrSheet(sheetName, rowArray, actionDetail, successMsg, callback) {
-            // บันทึกลง LocalStorage ก่อนเสมอเพื่อให้เว็บใช้งานได้ทันที (รองรับ GitHub Pages)
+        function saveDataRecord(sheetName, rowArray, successMsg, callback) {
+            // Update local storage immediately for responsive offline & GitHub usage
             if (sheetName === 'Member_Registry') {
                 db.members.push({ id: rowArray[0], name: rowArray[1], phone: rowArray[2], area: rowArray[3], points: rowArray[4] });
             } else if (sheetName === 'Deposit_Log') {
@@ -305,30 +222,27 @@
             }
             saveLocalStorage();
 
-            // หากต่อ Google Apps Script ได้ ให้ส่งข้อมูลไปอัปเดตบน Sheet ด้วย
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
+            if (isOnlineMode && typeof google !== 'undefined' && google.script && google.script.run) {
                 showLoading('กำลังบันทึกไปยัง Google Sheets...');
                 google.script.run
-                    .withSuccessHandler(function(response) {
+                    .withSuccessHandler(function() {
                         hideLoading();
                         showToast('✅ ' + successMsg);
                         if(callback) callback();
                     })
-                    .withFailureHandler(function(error) {
+                    .withFailureHandler(function() {
                         hideLoading();
-                        showToast('⚠️ บันทึกในเครื่องสำเร็จ (แต่ Sheet ออฟไลน์)');
+                        showToast('⚠️ บันทึกในเครื่องสำเร็จ (Google Sheet ออฟไลน์)');
                         if(callback) callback();
                     })
-                    .addRecord(sheetName, rowArray, currentUser, actionDetail);
+                    .addRecord(sheetName, rowArray, 'PublicUser', successMsg);
             } else {
+                hideLoading();
                 showToast('✅ ' + successMsg);
                 if(callback) callback();
             }
         }
 
-        // ==========================================
-        // NAVIGATION & VIEWS
-        // ==========================================
         const mainContent = document.getElementById('main-content');
 
         function switchTab(tabId) {
@@ -337,11 +251,9 @@
                 const el = document.getElementById(`nav-${id}`);
                 if (!el) return;
                 if (id === tabId) {
-                    el.classList.replace('text-gray-400', 'text-blue-600');
-                    el.classList.add('bg-blue-50');
+                    el.className = 'flex flex-col items-center text-blue-600 w-1/5 p-1 transition-colors rounded-xl bg-blue-50 font-bold';
                 } else {
-                    el.classList.replace('text-blue-600', 'text-gray-400');
-                    el.classList.remove('bg-blue-50');
+                    el.className = 'flex flex-col items-center text-gray-400 w-1/5 p-1 transition-colors rounded-xl font-medium';
                 }
             });
 
@@ -372,11 +284,7 @@
                 <div class="p-4 space-y-4 pb-10">
                     <div class="flex justify-center relative group pt-2 pb-2">
                         <div class="relative inline-block">
-                            <img src="${db.logoUrl || 'https://cdn-icons-png.flaticon.com/512/3060/3060265.png'}" id="dashboard-logo" class="h-24 w-24 object-contain rounded-2xl bg-white p-2 shadow-md border border-gray-100 transition-transform duration-300">
-                            ${currentRole === 'admin' ? `
-                            <button onclick="changeLogo()" class="absolute -bottom-2 -right-2 bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-blue-700 border-2 border-white z-10" title="เปลี่ยนโลโก้">
-                                <i class="fa-solid fa-camera text-[10px]"></i>
-                            </button>` : ''}
+                            <img src="${db.logoUrl || 'https://cdn-icons-png.flaticon.com/512/3060/3060265.png'}" id="dashboard-logo" class="h-24 w-24 object-contain rounded-2xl bg-white p-2 shadow-md border border-gray-100 cursor-pointer" onclick="changeLogo()" title="คลิกเพื่อเปลี่ยนโลโก้">
                         </div>
                     </div>
 
@@ -406,7 +314,7 @@
                             <h3 class="text-xs font-bold text-gray-800 flex items-center"><i class="fa-solid fa-chart-simple text-blue-500 mr-2"></i>สถิติรับฝากแม่ปู</h3>
                             <div class="flex bg-gray-100 p-0.5 rounded-lg text-[10px]">
                                 <button onclick="setChartMode('daily')" id="mode-daily" class="px-2 py-1 rounded-md text-gray-500">รายวัน</button>
-                                <button onclick="setChartMode('monthly')" id="mode-monthly" class="px-2 py-1 rounded-md bg-white text-blue-600 shadow-sm">รายเดือน</button>
+                                <button onclick="setChartMode('monthly')" id="mode-monthly" class="px-2 py-1 rounded-md bg-white text-blue-600 shadow-sm font-bold">รายเดือน</button>
                                 <button onclick="setChartMode('yearly')" id="mode-yearly" class="px-2 py-1 rounded-md text-gray-500">รายปี</button>
                             </div>
                         </div>
@@ -455,7 +363,7 @@
             ['daily', 'monthly', 'yearly'].forEach(m => {
                 const btn = document.getElementById(`mode-${m}`);
                 if (btn) {
-                    btn.className = m === mode ? 'px-2 py-1 rounded-md font-medium bg-white text-blue-600 shadow-sm' : 'px-2 py-1 rounded-md font-medium text-gray-500';
+                    btn.className = m === mode ? 'px-2 py-1 rounded-md font-bold bg-white text-blue-600 shadow-sm' : 'px-2 py-1 rounded-md font-medium text-gray-500';
                 }
             });
             updateDashboardData();
@@ -532,6 +440,8 @@
 
         function renderDeposit() {
             let options = db.members.map(m => `<option value="${m.id}">${m.id} - ${m.name}</option>`).join('');
+            if(db.members.length === 0) options = `<option value="" disabled selected>กรุณาเพิ่มสมาชือกก่อน</option>`;
+
             mainContent.innerHTML = `
                 <div class="p-4 pb-10">
                     <form onsubmit="handleDepositSubmit(event)" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
@@ -649,15 +559,16 @@
                     <div class="text-right text-orange-500 font-bold">${m.points||0} pt</div>
                 </div>
             `).join('');
-            
-            let btnHtml = '';
-            if (currentRole === 'admin') {
-                btnHtml = `<button onclick="document.getElementById('modal-add-member').classList.remove('hidden')" class="w-full bg-white border-2 border-dashed border-blue-300 text-blue-600 font-bold py-3 rounded-xl mt-4"><i class="fa-solid fa-user-plus mr-2"></i> ลงทะเบียนสมาชิกใหม่</button>`;
-            } else {
-                btnHtml = `<div class="text-center text-xs text-gray-400 mt-4">เฉพาะ Admin เท่านั้นที่สามารถเพิ่มสมาชิกได้</div>`;
-            }
 
-            mainContent.innerHTML = `<div class="p-4 pb-10"><h2 class="text-base font-bold mb-4">สมาชิกชาวประมง (${db.members.length}/300)</h2>${html}${btnHtml}</div>`;
+            mainContent.innerHTML = `
+                <div class="p-4 pb-10">
+                    <h2 class="text-base font-bold mb-4">สมาชิกชาวประมง (${db.members.length}/300)</h2>
+                    ${html}
+                    <button onclick="document.getElementById('modal-add-member').classList.remove('hidden')" class="w-full bg-white border-2 border-dashed border-blue-300 text-blue-600 font-bold py-3 rounded-xl mt-4">
+                        <i class="fa-solid fa-user-plus mr-2"></i> ลงทะเบียนสมาชิกใหม่
+                    </button>
+                </div>
+            `;
         }
 
         function closeModal(id) { 
@@ -665,9 +576,6 @@
             if(el) el.classList.add('hidden'); 
         }
 
-        // ==========================================
-        // FORM SUBMISSIONS
-        // ==========================================
         function handleAddMember(e) {
             e.preventDefault();
             if (db.members.length >= MAX_MEMBERS) { showToast('สมาชิกเต็ม 300 คนแล้ว'); return; }
@@ -683,7 +591,7 @@
             document.getElementById('new-member-name').value = '';
             document.getElementById('new-member-phone').value = '';
 
-            saveDataToStorageOrSheet('Member_Registry', row, `Added member ${id}`, 'เพิ่มสมาชิกสำเร็จ', function() {
+            saveDataRecord('Member_Registry', row, 'เพิ่มสมาชิกสำเร็จ', function() {
                 renderMembers();
             });
         }
@@ -710,7 +618,7 @@
                 'กำลังฟัก'
             ];
 
-            saveDataToStorageOrSheet('Deposit_Log', row, `Deposit ${txn}`, 'บันทึกการรับฝากสำเร็จ', function() {
+            saveDataRecord('Deposit_Log', row, 'บันทึกการรับฝากสำเร็จ', function() {
                 switchTab('dashboard');
             });
         }
@@ -724,7 +632,7 @@
             
             const row = [ getToday(), txn, crabs, rate, zoea, document.getElementById('rel-loc').value ];
 
-            saveDataToStorageOrSheet('Release_Log', row, `Release for ${txn}`, 'บันทึกการปล่อยสำเร็จ', function() {
+            saveDataRecord('Release_Log', row, 'บันทึกการปล่อยสำเร็จ', function() {
                 switchTab('dashboard');
             });
         }
@@ -742,7 +650,7 @@
             
             const row = [ txn, getToday(), document.getElementById('pur-member').value, wm, pm, wl, pl, tot ];
 
-            saveDataToStorageOrSheet('Purchase_Log', row, `Purchase ${txn}`, 'บันทึกการรับซื้อสำเร็จ', function() {
+            saveDataRecord('Purchase_Log', row, 'บันทึกการรับซื้อสำเร็จ', function() {
                 switchTab('dashboard');
             });
         }
@@ -767,17 +675,15 @@
         }
 
         function changeLogo() {
-            const currentUrl = db.logoUrl || '';
-            const newUrl = prompt('กรุณาใส่ลิงก์รูปภาพโลโก้ใหม่ (URL รูปภาพที่ลงท้ายด้วย .png หรือ .jpg):', currentUrl);
-            
-            if (newUrl && newUrl !== currentUrl) {
+            const newUrl = prompt('กรุณาใส่ลิงก์รูปภาพโลโก้ใหม่ (URL รูปภาพ .png หรือ .jpg):', db.logoUrl || '');
+            if (newUrl && newUrl !== db.logoUrl) {
                 db.logoUrl = newUrl;
                 saveLocalStorage();
                 const logoImg = document.getElementById('dashboard-logo');
                 if(logoImg) logoImg.src = newUrl;
                 
-                if (typeof google !== 'undefined' && google.script && google.script.run) {
-                    google.script.run.updateSetting('LogoUrl', newUrl, currentUser);
+                if (isOnlineMode && typeof google !== 'undefined' && google.script && google.script.run) {
+                    google.script.run.updateSetting('LogoUrl', newUrl, 'PublicUser');
                 }
                 showToast('✅ อัปเดตโลโก้สำเร็จ');
             }
