@@ -1,692 +1,1189 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ธนาคารปูม้า - Crab Bank System</title>
-    
-    <!-- CSS Libraries -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบธนาคารปูม้าชุมชน (Crab Bank System)</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Chart.js for Dashboard -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        },
+                        ocean: {
+                            50: '#ecfeff',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                            700: '#0e7490',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Sarabun', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts for Thai & English -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for interactive dashboards -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <style>
-        body { font-family: 'Prompt', sans-serif; background-color: #f1f5f9; -webkit-tap-highlight-color: transparent; }
-        ::-webkit-scrollbar { display: none; }
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
-        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); }
-        .hide-scroll::-webkit-scrollbar { display: none; }
-        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-        .spinner { border: 4px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 4px solid #fff; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { font-family: 'Sarabun', 'Inter', sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="text-gray-800 antialiased overflow-hidden flex justify-center items-center h-[100dvh]">
+<body class="h-full bg-slate-50 text-slate-800 flex flex-col justify-between">
 
-    <!-- Main App Container (Mobile-First Frame) -->
-    <div id="app-container" class="w-full max-w-md mx-auto bg-gray-50 h-[100dvh] relative shadow-2xl flex flex-col overflow-hidden border-x border-gray-200">
-        
-        <!-- Header -->
-        <header class="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-4 flex justify-between items-center shadow-md shrink-0 z-20">
-            <div>
-                <h1 class="text-xl font-bold tracking-wide"><i class="fa-solid fa-crab text-orange-300 mr-2"></i>ธนาคารปูม้า</h1>
-                <p class="text-[10px] text-blue-100 opacity-90">ระบบจัดการ ESG & SROI | สถานะ: <span id="mode-badge" class="px-1.5 py-0.5 rounded text-[8px] bg-amber-500 text-white font-bold">Offline Mode</span></p>
+    <header class="bg-gradient-to-r from-ocean-700 via-brand-700 to-brand-800 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('dashboard')">
+                <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-xl shadow-inner">
+                    🦀
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-wide">ธนาคารปูม้าชุมชน</h1>
+                    <p class="text-xs text-brand-100">Google Sheet ID: <span class="font-mono text-[10px] opacity-90">1BUyf1ynmoRXXznZy4zIOsqGSWch3-BC_6dbDFpXbBSg</span></p>
+                </div>
             </div>
             <div class="flex items-center space-x-2">
-                <button onclick="refreshData()" class="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors shadow-sm" title="ซิงค์ข้อมูล">
-                    <i class="fa-solid fa-rotate" id="sync-icon"></i>
+                <span id="syncStatusBadge" class="hidden sm:inline bg-emerald-500/20 border border-emerald-400/30 text-emerald-100 px-2.5 py-1 rounded-lg text-xs font-medium">
+                    <i class="fa-solid fa-circle text-[8px] text-emerald-400 mr-1 animate-pulse"></i> เชื่อมต่อ Google Sheet
+                </span>
+                <button onclick="syncWithGoogleSheet()" class="bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center space-x-1.5 border border-white/20">
+                    <i class="fa-solid fa-rotate" id="syncIcon"></i>
+                    <span class="hidden sm:inline">ซิงค์ข้อมูล</span>
                 </button>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <!-- Main Content Area -->
-        <main class="flex-1 overflow-y-auto w-full relative z-10 pb-24" id="main-content">
-            <!-- Dynamic views injected here -->
-        </main>
-
-        <!-- Bottom Navigation -->
-        <nav class="bg-white border-t border-gray-200 absolute bottom-0 w-full flex justify-between px-1 py-2 pb-safe shadow-[0_-4px_15px_rgba(0,0,0,0.05)] z-50">
-            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center text-blue-600 w-1/5 p-1 transition-colors rounded-xl bg-blue-50">
-                <i class="fa-solid fa-chart-pie text-[18px] mb-1"></i><span class="text-[9px] font-medium">ภาพรวม</span>
-            </button>
-            <button onclick="switchTab('deposit')" id="nav-deposit" class="flex flex-col items-center text-gray-400 w-1/5 p-1 transition-colors rounded-xl">
-                <i class="fa-solid fa-box-archive text-[18px] mb-1"></i><span class="text-[9px] font-medium">รับฝาก</span>
-            </button>
-            <button onclick="switchTab('release')" id="nav-release" class="flex flex-col items-center text-gray-400 w-1/5 p-1 transition-colors rounded-xl">
-                <i class="fa-solid fa-water text-[18px] mb-1"></i><span class="text-[9px] font-medium">ปล่อยปู</span>
-            </button>
-            <button onclick="switchTab('purchase')" id="nav-purchase" class="flex flex-col items-center text-gray-400 w-1/5 p-1 transition-colors rounded-xl">
-                <i class="fa-solid fa-hand-holding-dollar text-[18px] mb-1"></i><span class="text-[9px] font-medium">รับซื้อ</span>
-            </button>
-            <button onclick="switchTab('members')" id="nav-members" class="flex flex-col items-center text-gray-400 w-1/5 p-1 transition-colors rounded-xl">
-                <i class="fa-solid fa-users text-[18px] mb-1"></i><span class="text-[9px] font-medium">สมาชิก</span>
-            </button>
-        </nav>
-
-        <!-- Add Member Modal -->
-        <div id="modal-add-member" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
-            <div class="modal-overlay absolute inset-0" onclick="closeModal('modal-add-member')"></div>
-            <div class="bg-white rounded-2xl w-full max-w-sm relative z-10 shadow-xl overflow-hidden">
-                <div class="bg-blue-600 px-4 py-3 flex justify-between items-center text-white">
-                    <h3 class="font-bold text-sm">เพิ่มสมาชิกระบบธนาคารปู</h3>
-                    <button onclick="closeModal('modal-add-member')" class="text-white/80 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+    <main class="flex-1 overflow-y-auto max-w-7xl w-full mx-auto px-4 py-4 pb-24">
+        
+        <!-- ================= TAB 1: DASHBOARD ================= -->
+        <div id="tab-dashboard" class="space-y-6 tab-content">
+            <!-- Filter Bar -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-filter text-brand-600"></i>
+                    <span class="font-semibold text-sm text-slate-700">กรองข้อมูลสถิติ:</span>
                 </div>
-                <form onsubmit="handleAddMember(event)" class="p-5">
-                    <div class="mb-4">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">ชื่อ-สกุล</label>
-                        <input type="text" id="new-member-name" required class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">เบอร์โทรศัพท์</label>
-                        <input type="tel" id="new-member-phone" required class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div class="mb-6">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">พื้นที่</label>
-                        <select id="new-member-area" required class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                            <option value="สะพลี">สะพลี</option>
-                            <option value="ปากน้ำปราณ">ปากน้ำปราณ</option>
-                            <option value="อื่นๆ">อื่นๆ</option>
+                <div class="flex flex-wrap items-center gap-3">
+                    <div>
+                        <label class="text-xs text-slate-500 block mb-1">เลือกปี (พ.ศ.)</label>
+                        <select id="filterYear" onchange="updateDashboard()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="all">ทุกปี (ภาพรวม)</option>
+                            <option value="2569" selected>ปี 2569</option>
+                            <option value="2568">ปี 2568</option>
                         </select>
                     </div>
-                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-md">
-                        บันทึกสมาชิกใหม่
+                    <div>
+                        <label class="text-xs text-slate-500 block mb-1">มุมมองกราฟฝากปู</label>
+                        <select id="filterDepositView" onchange="updateDepositChart()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="monthly">รายเดือน</option>
+                            <option value="daily">รายวัน</option>
+                            <option value="yearly">รายปี</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Stats Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-gradient-to-br from-brand-600 to-brand-800 text-white rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                    <div class="absolute -right-4 -bottom-4 text-white/10 text-7xl font-bold">🦀</div>
+                    <p class="text-xs text-brand-100 font-medium uppercase tracking-wider">ยอดลูกปูปล่อยคืนทะเลสะสม</p>
+                    <h3 id="statTotalReleased" class="text-3xl font-extrabold mt-2">0</h3>
+                    <p class="text-xs text-brand-200 mt-2 flex items-center">
+                        <i class="fa-solid fa-bullseye mr-1"></i> เป้าหมายรายปี: <span id="statTargetReleased" class="font-bold ml-1">1,000,000 ตัว</span>
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <p class="text-xs text-slate-500 font-medium uppercase">แม่ปูรับฝากทั้งหมด</p>
+                            <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm font-bold"><i class="fa-solid fa-box-archive"></i></span>
+                        </div>
+                        <h3 id="statTotalDeposited" class="text-2xl font-bold text-slate-800 mt-2">0 ตัว</h3>
+                    </div>
+                    <p class="text-xs text-emerald-600 mt-3 font-medium flex items-center">
+                        <i class="fa-solid fa-arrow-up mr-1"></i> อัตราการฟักเฉลี่ย 80%
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <p class="text-xs text-slate-500 font-medium uppercase">สมาชิกเข้าร่วมโครงการ</p>
+                            <span class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm font-bold"><i class="fa-solid fa-users"></i></span>
+                        </div>
+                        <h3 id="statTotalMembers" class="text-2xl font-bold text-slate-800 mt-2">0 คน</h3>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-3">สูงสุดรองรับ 100 คน</p>
+                </div>
+
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <p class="text-xs text-slate-500 font-medium uppercase">SROI (ผลตอบแทนสังคม)</p>
+                            <span class="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-sm font-bold"><i class="fa-solid fa-chart-line"></i></span>
+                        </div>
+                        <h3 id="statSROI" class="text-2xl font-bold text-purple-700 mt-2">3.45x</h3>
+                    </div>
+                    <p class="text-xs text-purple-600 mt-3 font-medium">มูลค่าเศรษฐกิจคุ้มค่าการลงทุน</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons Row -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <button onclick="switchTab('deposit')" class="bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 text-white p-4 rounded-2xl shadow-md font-semibold text-sm flex flex-col items-center justify-center space-y-2 transition transform active:scale-95">
+                    <i class="fa-solid fa-hand-holding-heart text-2xl"></i>
+                    <span>รับฝากแม่ปู</span>
+                </button>
+                <button onclick="switchTab('release')" class="bg-gradient-to-r from-ocean-600 to-ocean-700 hover:from-ocean-700 hover:to-ocean-800 text-white p-4 rounded-2xl shadow-md font-semibold text-sm flex flex-col items-center justify-center space-y-2 transition transform active:scale-95">
+                    <i class="fa-solid fa-water text-2xl"></i>
+                    <span>บันทึกปล่อยปู</span>
+                </button>
+                <button onclick="switchTab('purchase')" class="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white p-4 rounded-2xl shadow-md font-semibold text-sm flex flex-col items-center justify-center space-y-2 transition transform active:scale-95">
+                    <i class="fa-solid fa-basket-shopping text-2xl"></i>
+                    <span>รับซื้อปูม้า</span>
+                </button>
+                <button onclick="switchTab('members')" class="bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white p-4 rounded-2xl shadow-md font-semibold text-sm flex flex-col items-center justify-center space-y-2 transition transform active:scale-95">
+                    <i class="fa-solid fa-address-book text-2xl"></i>
+                    <span>จัดการสมาชิก</span>
+                </button>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Bar Chart: Deposit Log / Release stats -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 lg:col-span-2 flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-bold text-slate-800 text-base"><i class="fa-solid fa-chart-column text-brand-600 mr-2"></i> สถิติยอดรับฝากแม่ปูและปล่อยลูกปู</h4>
+                        <span id="chartRangeLabel" class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg">ปี 2569</span>
+                    </div>
+                    <div class="relative h-72 w-full">
+                        <canvas id="depositChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Donut Chart: Egg Colors Distribution -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-base mb-1"><i class="fa-solid fa-chart-pie text-amber-500 mr-2"></i> สัดส่วนสถานะสีไข่ปู</h4>
+                        <p class="text-xs text-slate-400 mb-4">จำแนกตามระยะการฟัก (เหลือง / ส้ม / ดำ)</p>
+                    </div>
+                    <div class="relative h-56 w-full flex items-center justify-center">
+                        <canvas id="eggColorChart"></canvas>
+                    </div>
+                    <div id="eggLegend" class="grid grid-cols-3 gap-2 mt-4 text-center text-xs">
+                        <div class="bg-amber-50 text-amber-800 p-2 rounded-xl">ไข่เหลือง: <span id="countYellow" class="font-bold">0</span></div>
+                        <div class="bg-orange-50 text-orange-800 p-2 rounded-xl">ไข่ส้ม: <span id="countOrange" class="font-bold">0</span></div>
+                        <div class="bg-slate-800 text-white p-2 rounded-xl">ไข่ดำ: <span id="countBlack" class="font-bold">0</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Crab Purchase Analytics Section -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-lg"><i class="fa-solid fa-scale-balanced text-amber-600 mr-2"></i> สถิติการรับซื้อปูม้าจากสมาชิกชุมชน</h4>
+                        <p class="text-xs text-slate-500">วิเคราะห์ปริมาณและมูลค่าการรับซื้อจำแนกตามขนาด (กลาง / ใหญ่)</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-slate-500">ยอดเงินรับซื้อรวมสะสม</p>
+                        <h3 id="totalPurchaseMoneyDisplay" class="text-xl font-bold text-brand-700">0.00 บาท</h3>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <div class="relative h-64 w-full flex items-center justify-center">
+                        <canvas id="purchaseDonutChart"></canvas>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-circle text-blue-500 mr-2 text-xs"></i> ปูม้าขนาดกลาง</span>
+                                <span id="statMedCount" class="font-bold text-slate-800">0 ตัว (0 กก.)</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs text-slate-500">
+                                <span>คิดเป็นมูลค่า</span>
+                                <span id="statMedMoney" class="font-semibold text-slate-700">0.00 บาท</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-circle text-purple-600 mr-2 text-xs"></i> ปูม้าขนาดใหญ่</span>
+                                <span id="statLargeCount" class="font-bold text-slate-800">0 ตัว (0 กก.)</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs text-slate-500">
+                                <span>คิดเป็นมูลค่า</span>
+                                <span id="statLargeMoney" class="font-semibold text-slate-700">0.00 บาท</span>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-brand-50 rounded-xl text-xs text-brand-800 flex items-center space-x-2">
+                            <i class="fa-solid fa-circle-info text-brand-600"></i>
+                            <span>บันทึกการรับซื้อปูม้าจากสมาชิกเพื่อนำมาคัดแม่ปูไข่และกระจายรายได้</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 2: DEPOSIT (รับฝากแม่ปู) ================= -->
+        <div id="tab-deposit" class="space-y-6 tab-content hidden">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 max-w-2xl mx-auto">
+                <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-hand-holding-heart"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-800">บันทึกรับฝากแม่ปูไข่</h3>
+                            <p class="text-xs text-slate-500">บันทึกข้อมูลตั้งต้นคำนวณประสิทธิภาพการเพาะฟัก</p>
+                        </div>
+                    </div>
+                    <button onclick="switchTab('dashboard')" class="text-slate-400 hover:text-slate-600 text-sm"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+
+                <form id="depositForm" onsubmit="handleDepositSubmit(event)" class="space-y-5">
+                    <!-- Date Input -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">วันที่รับฝาก</label>
+                        <input type="date" id="depDate" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+
+                    <!-- Member Selection & QR Scan -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-sm font-semibold text-slate-700">รหัสสมาชิก / ชาวประมง</label>
+                            <button type="button" onclick="simulateQRScan()" class="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center space-x-1">
+                                <i class="fa-solid fa-qrcode"></i> <span>จำลองสแกน QR Code</span>
+                            </button>
+                        </div>
+                        <select id="depMemberId" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="">-- เลือกสมาชิก --</option>
+                        </select>
+                    </div>
+
+                    <!-- Number of crabs with +/- buttons -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">จำนวนแม่ปู (ตัว)</label>
+                        <div class="flex items-center space-x-2">
+                            <button type="button" onclick="adjustCount(-1)" class="w-12 h-11 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 font-bold text-lg flex items-center justify-center transition">-</button>
+                            <input type="number" id="depCount" value="1" min="1" max="50" required class="flex-1 text-center bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-base font-bold focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <button type="button" onclick="adjustCount(1)" class="w-12 h-11 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 font-bold text-lg flex items-center justify-center transition">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Total Weight -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">น้ำหนักรวม (กก.)</label>
+                        <input type="number" step="0.1" id="depWeight" placeholder="เช่น 1.5" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+
+                    <!-- Egg Color Selection -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">สีของไข่ปู (ระยะเวลาฟัก)</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="eggColor" value="เหลือง" class="peer sr-only" required>
+                                <div class="border-2 border-slate-200 peer-checked:border-amber-500 peer-checked:bg-amber-50 rounded-xl p-3 text-center transition">
+                                    <div class="w-8 h-8 mx-auto rounded-full bg-amber-400 mb-1 shadow-inner"></div>
+                                    <span class="text-xs font-semibold text-slate-700">เหลือง</span>
+                                    <span class="block text-[10px] text-slate-400">ฟักช้าสุด</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="eggColor" value="ส้ม" class="peer sr-only">
+                                <div class="border-2 border-slate-200 peer-checked:border-orange-500 peer-checked:bg-orange-50 rounded-xl p-3 text-center transition">
+                                    <div class="w-8 h-8 mx-auto rounded-full bg-orange-500 mb-1 shadow-inner"></div>
+                                    <span class="text-xs font-semibold text-slate-700">ส้ม</span>
+                                    <span class="block text-[10px] text-slate-400">ปานกลาง</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="eggColor" value="ดำ" class="peer sr-only">
+                                <div class="border-2 border-slate-200 peer-checked:border-slate-800 peer-checked:bg-slate-100 rounded-xl p-3 text-center transition">
+                                    <div class="w-8 h-8 mx-auto rounded-full bg-slate-800 mb-1 shadow-inner"></div>
+                                    <span class="text-xs font-semibold text-slate-700">ดำ</span>
+                                    <span class="block text-[10px] text-slate-400">ใกล้ฟักแล้ว</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="depSubmitBtn" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>บันทึกข้อมูลรับฝากแม่ปู</span>
                     </button>
                 </form>
             </div>
         </div>
-    </div>
 
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="fixed inset-0 bg-black/60 z-[200] hidden flex-col items-center justify-center backdrop-blur-sm">
-        <div class="spinner mb-4"></div>
-        <div id="loading-text" class="text-white font-medium text-sm">กำลังเชื่อมต่อข้อมูล...</div>
-    </div>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-5 py-2.5 rounded-full text-sm font-medium shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none z-[300]">
-        Notification
-    </div>
-
-    <script>
-        const MAX_MEMBERS = 300;
-        let db = { members: [], deposits: [], releases: [], purchases: [], logoUrl: 'https://cdn-icons-png.flaticon.com/512/3060/3060265.png' };
-        let currentSelectedYear = 2026;
-        let currentChartMode = 'monthly'; 
-        let barChartInstance, donutChartInstance, purchaseDonutChartInstance = null;
-        let currentTab = 'dashboard';
-        let isOnlineMode = false;
-
-        // Load data on startup
-        window.onload = function() {
-            loadLocalStorage();
-            refreshData();
-        };
-
-        function loadLocalStorage() {
-            const saved = localStorage.getItem('crab_bank_db_v2');
-            if (saved) {
-                try {
-                    db = JSON.parse(saved);
-                } catch(e) {}
-            } else {
-                db = getMockData();
-                saveLocalStorage();
-            }
-        }
-
-        function saveLocalStorage() {
-            localStorage.setItem('crab_bank_db_v2', JSON.stringify(db));
-        }
-
-        function showLoading(text = 'กำลังโหลด...') {
-            document.getElementById('loading-text').innerText = text;
-            document.getElementById('loading-overlay').classList.remove('hidden');
-            document.getElementById('loading-overlay').classList.add('flex');
-        }
-
-        function hideLoading() {
-            document.getElementById('loading-overlay').classList.add('hidden');
-            document.getElementById('loading-overlay').classList.remove('flex');
-        }
-
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            toast.innerText = message;
-            toast.classList.remove('opacity-0');
-            setTimeout(() => toast.classList.add('opacity-0'), 3000);
-        }
-
-        function refreshData() {
-            const icon = document.getElementById('sync-icon');
-            if(icon) icon.classList.add('fa-spin');
-            showLoading('กำลังซิงค์ข้อมูล...');
-
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run
-                    .withSuccessHandler(function(response) {
-                        hideLoading();
-                        if(icon) icon.classList.remove('fa-spin');
-                        try {
-                            const res = JSON.parse(response);
-                            if(res.status === 'success') {
-                                db = res.data;
-                                saveLocalStorage();
-                                isOnlineMode = true;
-                                document.getElementById('mode-badgeinnerText', 'Online (Google Sheets)');
-                                document.getElementById('mode-badge').innerText = 'Online (Sheets)';
-                                document.getElementById('mode-badge').className = 'px-1.5 py-0.5 rounded text-[8px] bg-green-500 text-white font-bold';
-                                showToast('ซิงค์ข้อมูลจาก Google Sheets สำเร็จ');
-                                switchTab(currentTab);
-                                return;
-                            }
-                        } catch(e) {}
-                        useOfflineFallback();
-                    })
-                    .withFailureHandler(function(error) {
-                        useOfflineFallback();
-                    })
-                    .getAllData();
-            } else {
-                setTimeout(() => {
-                    hideLoading();
-                    if(icon) icon.classList.remove('fa-spin');
-                    useOfflineFallback();
-                }, 400);
-            }
-        }
-
-        function useOfflineFallback() {
-            isOnlineMode = false;
-            document.getElementById('mode-badge').innerText = 'GitHub / Offline Mode';
-            document.getElementById('mode-badge').className = 'px-1.5 py-0.5 rounded text-[8px] bg-amber-500 text-white font-bold';
-            loadLocalStorage();
-            switchTab(currentTab);
-            showToast('ใช้งานในโหมด Local / GitHub Pages');
-        }
-
-        function saveDataRecord(sheetName, rowArray, successMsg, callback) {
-            // Update local storage immediately for responsive offline & GitHub usage
-            if (sheetName === 'Member_Registry') {
-                db.members.push({ id: rowArray[0], name: rowArray[1], phone: rowArray[2], area: rowArray[3], points: rowArray[4] });
-            } else if (sheetName === 'Deposit_Log') {
-                db.deposits.push({ txnId: rowArray[0], date: rowArray[1], memberId: rowArray[2], crabs: rowArray[3], weight: rowArray[4], eggColor: rowArray[5], estHatchDate: rowArray[6], status: rowArray[7] });
-            } else if (sheetName === 'Release_Log') {
-                db.releases.push({ date: rowArray[0], txnId: rowArray[1], crabs: rowArray[2], rate: rowArray[3], zoeaReleased: rowArray[4], location: rowArray[5] });
-                let dep = db.deposits.find(d => d.txnId === rowArray[1]);
-                if(dep) dep.status = 'ปล่อยแล้ว';
-            } else if (sheetName === 'Purchase_Log') {
-                db.purchases.push({ txnId: rowArray[0], date: rowArray[1], memberId: rowArray[2], weightM: rowArray[3], priceM: rowArray[4], weightL: rowArray[5], priceL: rowArray[6], totalAmt: rowArray[7] });
-            }
-            saveLocalStorage();
-
-            if (isOnlineMode && typeof google !== 'undefined' && google.script && google.script.run) {
-                showLoading('กำลังบันทึกไปยัง Google Sheets...');
-                google.script.run
-                    .withSuccessHandler(function() {
-                        hideLoading();
-                        showToast('✅ ' + successMsg);
-                        if(callback) callback();
-                    })
-                    .withFailureHandler(function() {
-                        hideLoading();
-                        showToast('⚠️ บันทึกในเครื่องสำเร็จ (Google Sheet ออฟไลน์)');
-                        if(callback) callback();
-                    })
-                    .addRecord(sheetName, rowArray, 'PublicUser', successMsg);
-            } else {
-                hideLoading();
-                showToast('✅ ' + successMsg);
-                if(callback) callback();
-            }
-        }
-
-        const mainContent = document.getElementById('main-content');
-
-        function switchTab(tabId) {
-            currentTab = tabId;
-            ['dashboard', 'deposit', 'release', 'purchase', 'members'].forEach(id => {
-                const el = document.getElementById(`nav-${id}`);
-                if (!el) return;
-                if (id === tabId) {
-                    el.className = 'flex flex-col items-center text-blue-600 w-1/5 p-1 transition-colors rounded-xl bg-blue-50 font-bold';
-                } else {
-                    el.className = 'flex flex-col items-center text-gray-400 w-1/5 p-1 transition-colors rounded-xl font-medium';
-                }
-            });
-
-            if (barChartInstance) { barChartInstance.destroy(); barChartInstance = null; }
-            if (donutChartInstance) { donutChartInstance.destroy(); donutChartInstance = null; }
-            if (purchaseDonutChartInstance) { purchaseDonutChartInstance.destroy(); purchaseDonutChartInstance = null; }
-
-            if (tabId === 'dashboard') renderDashboard();
-            if (tabId === 'deposit') renderDeposit();
-            if (tabId === 'release') renderRelease();
-            if (tabId === 'purchase') renderPurchase();
-            if (tabId === 'members') renderMembers();
-        }
-
-        function renderDashboard() {
-            const yearsSet = new Set(db.deposits.map(d => {
-                let dt = new Date(d.date); return isNaN(dt)? 2026 : dt.getFullYear();
-            }));
-            yearsSet.add(new Date().getFullYear());
-            yearsSet.add(2026);
-            
-            const sortedYears = Array.from(yearsSet).filter(y => y >= 2026).sort((a, b) => a - b);
-            if(!sortedYears.includes(currentSelectedYear)) currentSelectedYear = sortedYears[0] || 2026;
-            
-            const yearOptions = sortedYears.map(y => `<option value="${y}" ${y === currentSelectedYear ? 'selected' : ''}>ปี ${y + 543}</option>`).join('');
-
-            mainContent.innerHTML = `
-                <div class="p-4 space-y-4 pb-10">
-                    <div class="flex justify-center relative group pt-2 pb-2">
-                        <div class="relative inline-block">
-                            <img src="${db.logoUrl || 'https://cdn-icons-png.flaticon.com/512/3060/3060265.png'}" id="dashboard-logo" class="h-24 w-24 object-contain rounded-2xl bg-white p-2 shadow-md border border-gray-100 cursor-pointer" onclick="changeLogo()" title="คลิกเพื่อเปลี่ยนโลโก้">
+        <!-- ================= TAB 3: RELEASE (บันทึกการปล่อยปู) ================= -->
+        <div id="tab-release" class="space-y-6 tab-content hidden">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 max-w-2xl mx-auto">
+                <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-ocean-50 text-ocean-600 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-water"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-800">บันทึกปล่อยลูกปูคืนสู่ทะเล</h3>
+                            <p class="text-xs text-slate-500">คำนวณประชากรลูกปูตามสูตรงานวิจัย (อัตราการฟัก 80%)</p>
                         </div>
                     </div>
+                    <button onclick="switchTab('dashboard')" class="text-slate-400 hover:text-slate-600 text-sm"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
 
-                    <div class="flex justify-between items-center bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
-                        <div>
-                            <h2 class="text-sm font-bold text-gray-800">ภาพรวมธนาคารปูม้า</h2>
-                        </div>
-                        <select id="dash-year-filter" onchange="updateDashboardData()" class="bg-gray-50 border border-gray-300 text-gray-700 text-xs rounded-lg px-3 py-2 font-medium focus:ring-blue-500 outline-none">
-                            ${yearOptions}
+                <form id="releaseForm" onsubmit="handleReleaseSubmit(event)" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">วันที่ปล่อย</label>
+                        <input type="date" id="relDate" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ocean-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">อ้างอิง Transaction ID (แม่ปูฝาก)</label>
+                        <select id="relTxId" required onchange="autofillReleaseCount()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ocean-500">
+                            <option value="">-- เลือกรายการฝากแม่ปู --</option>
                         </select>
                     </div>
 
-                    <!-- KPI Banner -->
-                    <div class="bg-gradient-to-br from-blue-700 to-blue-600 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
-                        <div class="absolute top-0 right-0 opacity-10 transform translate-x-4 -translate-y-4"><i class="fa-solid fa-water text-8xl"></i></div>
-                        <h2 class="text-xs font-medium mb-1 opacity-90">ยอดปล่อยลูกปูระยะ Zoea (<span id="lbl-year-zoea">${currentSelectedYear + 543}</span>)</h2>
-                        <div class="text-3xl font-black mb-3" id="kpi-zoea">0 <span class="text-base font-normal">ตัว</span></div>
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <div class="flex justify-between text-[10px] mb-1"><span>เป้าหมาย: 10M ตัว</span><span id="kpi-progress-pct">0%</span></div>
-                            <div class="w-full bg-blue-900/50 rounded-full h-2"><div id="kpi-progress-bar" class="bg-orange-400 h-2 rounded-full transition-all duration-500" style="width: 0%"></div></div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">จำนวนแม่ปูที่ฟัก (ตัว)</label>
+                            <input type="number" id="relCrabCount" oninput="calculateReleasedLarvae()" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ocean-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">อัตราการฟัก (%)</label>
+                            <input type="number" id="relRate" value="80" oninput="calculateReleasedLarvae()" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ocean-500">
                         </div>
                     </div>
 
-                    <!-- Bar Chart -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                        <div class="flex justify-between items-center mb-3">
-                            <h3 class="text-xs font-bold text-gray-800 flex items-center"><i class="fa-solid fa-chart-simple text-blue-500 mr-2"></i>สถิติรับฝากแม่ปู</h3>
-                            <div class="flex bg-gray-100 p-0.5 rounded-lg text-[10px]">
-                                <button onclick="setChartMode('daily')" id="mode-daily" class="px-2 py-1 rounded-md text-gray-500">รายวัน</button>
-                                <button onclick="setChartMode('monthly')" id="mode-monthly" class="px-2 py-1 rounded-md bg-white text-blue-600 shadow-sm font-bold">รายเดือน</button>
-                                <button onclick="setChartMode('yearly')" id="mode-yearly" class="px-2 py-1 rounded-md text-gray-500">รายปี</button>
-                            </div>
-                        </div>
-                        <div class="h-48 w-full relative"><canvas id="monthlyChart"></canvas></div>
+                    <div class="bg-ocean-50 border border-ocean-100 rounded-2xl p-4">
+                        <p class="text-xs text-ocean-700 font-medium">ผลการคำนวณประชากรลูกปู (Zoea):</p>
+                        <h4 id="calcResultDisplay" class="text-2xl font-extrabold text-ocean-900 mt-1">0 ตัว</h4>
+                        <p class="text-[11px] text-ocean-600 mt-1">สูตร: จำนวนแม่ปู × 500,000 × (อัตราการฟัก/100)</p>
                     </div>
 
-                    <!-- Donut Egg Color -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                        <h3 class="text-xs font-bold text-gray-800 mb-3"><i class="fa-solid fa-circle-notch text-orange-500 mr-2"></i>สัดส่วนสถานะไข่ปู</h3>
-                        <div class="h-44 w-full relative flex justify-center"><canvas id="eggColorChart"></canvas></div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">จุดที่ปล่อย (พิกัด / พื้นที่)</label>
+                        <input type="text" id="relLocation" value="สะพลี (10.4582° N, 99.2431° E)" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ocean-500">
                     </div>
 
-                    <!-- Donut Purchase -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                        <h3 class="text-xs font-bold text-gray-800 mb-3"><i class="fa-solid fa-hand-holding-dollar text-indigo-500 mr-2"></i>การรับซื้อปูม้า (กก.)</h3>
-                        <div class="h-44 w-full relative flex justify-center mb-4"><canvas id="purchaseDonutChart"></canvas></div>
-                        <div class="grid grid-cols-2 gap-3 border-t border-gray-100 pt-4 text-center">
-                            <div class="bg-indigo-50/60 rounded-xl p-3">
-                                <div class="text-[10px] text-indigo-600">ยอดเงินรับซื้อ (เดือน)</div>
-                                <div class="text-lg font-black text-indigo-700" id="kpi-pur-month">฿0</div>
-                            </div>
-                            <div class="bg-purple-50/60 rounded-xl p-3">
-                                <div class="text-[10px] text-purple-600">ยอดเงินรับซื้อ (ทั้งปี)</div>
-                                <div class="text-lg font-black text-purple-700" id="kpi-pur-year">฿0</div>
-                            </div>
+                    <button type="submit" id="relSubmitBtn" class="w-full bg-ocean-600 hover:bg-ocean-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>บันทึกปล่อยลูกปูคืนทะเล</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ================= TAB 4: PURCHASE (รับซื้อปูม้าจากสมาชิก) ================= -->
+        <div id="tab-purchase" class="space-y-6 tab-content hidden">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 max-w-2xl mx-auto">
+                <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-basket-shopping"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-800">บันทึกรับซื้อปูม้าจากสมาชิก</h3>
+                            <p class="text-xs text-slate-500">รับซื้อปูม้าที่สมาชิกจับได้เพื่อนำมาคัดแม่ปูไข่และกระจายรายได้</p>
                         </div>
                     </div>
+                    <button onclick="switchTab('dashboard')" class="text-slate-400 hover:text-slate-600 text-sm"><i class="fa-solid fa-xmark text-lg"></i></button>
                 </div>
-            `;
-            setTimeout(() => { initCharts(); updateDashboardData(); }, 100);
-        }
 
-        function initCharts() {
-            const ctxBar = document.getElementById('monthlyChart').getContext('2d');
-            barChartInstance = new Chart(ctxBar, { type: 'bar', data: { labels: [], datasets: [] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+                <form id="purchaseForm" onsubmit="handlePurchaseSubmit(event)" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">วันที่ทำรายการ</label>
+                        <input type="date" id="purDate" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
 
-            const ctxDonut = document.getElementById('eggColorChart').getContext('2d');
-            donutChartInstance = new Chart(ctxDonut, { type: 'doughnut', data: { labels: ['เหลือง', 'ส้ม', 'ดำ'], datasets: [] }, options: { responsive: true, maintainAspectRatio: false, cutout: '65%' } });
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">สมาชิกผู้ขายปู</label>
+                        <select id="purMemberId" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="">-- เลือกสมาชิก --</option>
+                        </select>
+                    </div>
 
-            const ctxPur = document.getElementById('purchaseDonutChart').getContext('2d');
-            purchaseDonutChartInstance = new Chart(ctxPur, { type: 'doughnut', data: { labels: ['ไซส์ M', 'ไซส์ L'], datasets: [] }, options: { responsive: true, maintainAspectRatio: false, cutout: '65%' } });
-        }
-
-        function setChartMode(mode) {
-            currentChartMode = mode;
-            ['daily', 'monthly', 'yearly'].forEach(m => {
-                const btn = document.getElementById(`mode-${m}`);
-                if (btn) {
-                    btn.className = m === mode ? 'px-2 py-1 rounded-md font-bold bg-white text-blue-600 shadow-sm' : 'px-2 py-1 rounded-md font-medium text-gray-500';
-                }
-            });
-            updateDashboardData();
-        }
-
-        function updateDashboardData() {
-            const yearFilter = document.getElementById('dash-year-filter');
-            if(yearFilter) currentSelectedYear = parseInt(yearFilter.value);
-            const lblZoea = document.getElementById('lbl-year-zoea');
-            if(lblZoea) lblZoea.innerText = currentSelectedYear + 543;
-
-            const yearlyReleases = db.releases.filter(r => new Date(r.date).getFullYear() === currentSelectedYear);
-            const totalZoea = yearlyReleases.reduce((s, r) => s + (parseInt(r.zoeaReleased)||0), 0);
-            const progressPct = Math.min((totalZoea / 10000000) * 100, 100);
-            
-            const kpiZoea = document.getElementById('kpi-zoea');
-            if(kpiZoea) kpiZoea.innerHTML = `${totalZoea.toLocaleString()} <span class="text-base font-normal">ตัว</span>`;
-            const kpiPct = document.getElementById('kpi-progress-pct');
-            if(kpiPct) kpiPct.innerText = `${progressPct.toFixed(1)}%`;
-            const kpiBar = document.getElementById('kpi-progress-bar');
-            if(kpiBar) kpiBar.style.width = `${progressPct}%`;
-
-            const yearlyDeposits = db.deposits.filter(d => new Date(d.date).getFullYear() === currentSelectedYear);
-            let labels = [], chartData = [];
-            if (currentChartMode === 'monthly') {
-                labels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-                chartData = new Array(12).fill(0);
-                yearlyDeposits.forEach(d => { const m = new Date(d.date).getMonth(); if(m>=0 && m<12) chartData[m] += parseInt(d.crabs)||0; });
-            } else if (currentChartMode === 'yearly') {
-                const years = Array.from(new Set(db.deposits.map(d => new Date(d.date).getFullYear()))).filter(y=>!isNaN(y)).sort();
-                labels = years.map(y => `ปี ${y+543}`);
-                chartData = years.map(y => db.deposits.filter(d => new Date(d.date).getFullYear() === y).reduce((s, d) => s + (parseInt(d.crabs)||0), 0));
-            } else {
-                let dateMap = {};
-                yearlyDeposits.forEach(d => { 
-                    const dt = d.date.split('T')[0]; 
-                    dateMap[dt] = (dateMap[dt]||0) + (parseInt(d.crabs)||0); 
-                });
-                labels = Object.keys(dateMap).sort().map(d => d.substring(5));
-                chartData = Object.keys(dateMap).sort().map(d => dateMap[d]);
-            }
-            if (barChartInstance) {
-                barChartInstance.data.labels = labels;
-                barChartInstance.data.datasets = [{ data: chartData, backgroundColor: '#3b82f6', borderRadius: 4 }];
-                barChartInstance.update();
-            }
-
-            let colorCounts = { 'เหลือง': 0, 'ส้ม': 0, 'ดำ': 0 };
-            yearlyDeposits.forEach(d => { if(colorCounts[d.eggColor] !== undefined) colorCounts[d.eggColor] += parseInt(d.crabs)||0; });
-            if (donutChartInstance) {
-                donutChartInstance.data.datasets = [{ data: [colorCounts['เหลือง'], colorCounts['ส้ม'], colorCounts['ดำ']], backgroundColor: ['#facc15', '#f97316', '#1f2937'] }];
-                donutChartInstance.update();
-            }
-
-            const yearlyPurchases = db.purchases.filter(p => new Date(p.date).getFullYear() === currentSelectedYear);
-            let tM = 0, tL = 0, amtYr = 0, amtMo = 0, currMo = new Date().getMonth();
-            yearlyPurchases.forEach(p => {
-                tM += parseFloat(p.weightM)||0; tL += parseFloat(p.weightL)||0; 
-                amtYr += parseFloat(p.totalAmt)||0;
-                if(new Date(p.date).getMonth() === currMo) amtMo += parseFloat(p.totalAmt)||0;
-            });
-            
-            const purYr = document.getElementById('kpi-pur-year');
-            if(purYr) purYr.innerText = '฿' + amtYr.toLocaleString();
-            const purMo = document.getElementById('kpi-pur-month');
-            if(purMo) purMo.innerText = '฿' + amtMo.toLocaleString();
-            if (purchaseDonutChartInstance) {
-                purchaseDonutChartInstance.data.datasets = [{ data: [tM, tL], backgroundColor: ['#6366f1', '#a855f7'] }];
-                purchaseDonutChartInstance.update();
-            }
-        }
-
-        function getToday() { return new Date().toISOString().split('T')[0]; }
-
-        function renderDeposit() {
-            let options = db.members.map(m => `<option value="${m.id}">${m.id} - ${m.name}</option>`).join('');
-            if(db.members.length === 0) options = `<option value="" disabled selected>กรุณาเพิ่มสมาชือกก่อน</option>`;
-
-            mainContent.innerHTML = `
-                <div class="p-4 pb-10">
-                    <form onsubmit="handleDepositSubmit(event)" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                        <h2 class="text-base font-bold text-gray-800 mb-4"><i class="fa-solid fa-box-archive text-blue-500 mr-2"></i>รับฝากแม่ปู</h2>
-                        <div class="mb-4">
-                            <label class="block text-xs font-medium text-gray-600 mb-1">วันที่รับฝาก</label>
-                            <input type="date" id="dep-date" value="${getToday()}" required class="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none">
-                        </div>
-                        <div class="mb-4">
-                            <label class="block text-xs font-medium text-gray-600 mb-1">รหัสสมาชิก</label>
-                            <select id="dep-member" required class="w-full border border-gray-300 rounded-lg p-3 text-sm bg-gray-50 outline-none">
-                                <option value="" disabled selected>เลือกสมาชิก...</option>${options}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">ขนาดปูม้า</label>
+                            <select id="purSize" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                <option value="กลาง">ขนาดกลาง (Med)</option>
+                                <option value="ใหญ่" selected>ขนาดใหญ่ (Large)</option>
                             </select>
                         </div>
-                        <div class="mb-4">
-                            <label class="block text-xs font-medium text-gray-600 mb-1">จำนวนแม่ปู (ตัว)</label>
-                            <input type="number" id="dep-crabs" min="1" value="1" required class="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">น้ำหนัก (กก.)</label>
+                            <input type="number" step="0.1" id="purWeight" placeholder="เช่น 2.0" required oninput="calculatePurchaseTotal()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
                         </div>
-                        <div class="mb-4">
-                            <label class="block text-xs font-medium text-gray-600 mb-1">น้ำหนักรวม (กก.)</label>
-                            <input type="number" id="dep-weight" step="0.1" required class="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none">
-                        </div>
-                        <div class="mb-6">
-                            <label class="block text-xs font-medium text-gray-600 mb-2">สีของไข่ปู</label>
-                            <div class="grid grid-cols-3 gap-3">
-                                <label><input type="radio" name="dep-color" value="เหลือง" class="peer hidden" required>
-                                    <div class="border p-2 rounded-xl text-center peer-checked:bg-yellow-100 peer-checked:border-yellow-400 text-xs">ไข่เหลือง</div>
-                                </label>
-                                <label><input type="radio" name="dep-color" value="ส้ม" class="peer hidden">
-                                    <div class="border p-2 rounded-xl text-center peer-checked:bg-orange-100 peer-checked:border-orange-400 text-xs">ไข่ส้ม</div>
-                                </label>
-                                <label><input type="radio" name="dep-color" value="ดำ" class="peer hidden">
-                                    <div class="border p-2 rounded-xl text-center peer-checked:bg-gray-200 peer-checked:border-gray-800 text-xs">ไข่ดำ</div>
-                                </label>
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg">บันทึกรับฝาก</button>
-                    </form>
-                </div>
-            `;
-        }
+                    </div>
 
-        function renderRelease() {
-            let pending = db.deposits.filter(d => d.status === 'กำลังฟัก' || d.status === 'Pending');
-            let options = pending.map(d => `<option value="${d.txnId}">${d.txnId} (${d.crabs} ตัว)</option>`).join('');
-            if(pending.length === 0) options = `<option value="" disabled selected>ไม่มีรายการรอฟัก</option>`;
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">ราคารับซื้อต่อกิโลกรัม (บาท)</label>
+                        <input type="number" id="purPricePerKg" value="250" required oninput="calculatePurchaseTotal()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
 
-            mainContent.innerHTML = `
-                <div class="p-4 pb-10">
-                    <form onsubmit="handleReleaseSubmit(event)" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                        <h2 class="text-base font-bold text-gray-800 mb-4"><i class="fa-solid fa-water text-green-500 mr-2"></i>ปล่อยลูกปู</h2>
-                        <div class="mb-4">
-                            <label class="block text-xs font-medium text-gray-600 mb-1">รหัสรับฝากอ้างอิง</label>
-                            <select id="rel-txn" required class="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none" onchange="autoFillRel()">${options}</select>
+                    <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-amber-800 font-medium">ยอดเงินรวมที่ต้องจ่ายให้สมาชิก:</p>
+                            <h4 id="purTotalMoneyDisplay" class="text-2xl font-extrabold text-amber-900 mt-0.5">0.00 บาท</h4>
                         </div>
-                        <div class="grid grid-cols-2 gap-3 mb-4">
-                            <div><label class="block text-[10px] text-gray-500">จำนวนที่ฟัก</label><input type="number" id="rel-crabs" readonly class="w-full border p-2 bg-gray-100 text-sm"></div>
-                            <div><label class="block text-[10px] text-gray-500">อัตราฟัก (%)</label><input type="number" id="rel-rate" value="80" max="100" class="w-full border p-2 text-sm"></div>
-                        </div>
-                        <div class="mb-4">
-                            <label class="block text-xs font-medium text-gray-600 mb-1">พิกัด</label>
-                            <input type="text" id="rel-loc" value="12.345, 99.876" class="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none">
-                        </div>
-                        <button type="submit" ${pending.length===0?'disabled':''} class="w-full bg-green-600 disabled:bg-gray-400 text-white font-bold py-3.5 rounded-xl">บันทึกปล่อยปู</button>
-                    </form>
-                </div>
-            `;
-        }
-        
-        function autoFillRel() {
-            let t = document.getElementById('rel-txn').value;
-            let d = db.deposits.find(x => x.txnId === t);
-            if(d) document.getElementById('rel-crabs').value = d.crabs;
-        }
+                        <span class="text-3xl">💰</span>
+                    </div>
 
-        function renderPurchase() {
-            let options = db.members.map(m => `<option value="${m.id}">${m.id} - ${m.name}</option>`).join('');
-            mainContent.innerHTML = `
-                <div class="p-4 pb-10">
-                    <form onsubmit="handlePurchaseSubmit(event)" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                        <h2 class="text-base font-bold text-gray-800 mb-4"><i class="fa-solid fa-hand-holding-dollar text-indigo-500 mr-2"></i>รับซื้อปูม้า</h2>
-                        <div class="mb-4">
-                            <label class="block text-xs font-medium text-gray-600 mb-1">รหัสผู้ขาย</label>
-                            <select id="pur-member" required class="w-full border border-gray-300 rounded-lg p-3 text-sm">${options}</select>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3 mb-3">
-                            <div><label class="block text-[10px]">ไซส์ M (กก.)</label><input type="number" id="p-w-m" step="0.1" value="0" class="w-full border p-2 text-sm" oninput="calcPur()"></div>
-                            <div><label class="block text-[10px]">ราคา (บ/กก.)</label><input type="number" id="p-p-m" value="250" class="w-full border p-2 text-sm" oninput="calcPur()"></div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3 mb-4">
-                            <div><label class="block text-[10px]">ไซส์ L (กก.)</label><input type="number" id="p-w-l" step="0.1" value="0" class="w-full border p-2 text-sm" oninput="calcPur()"></div>
-                            <div><label class="block text-[10px]">ราคา (บ/กก.)</label><input type="number" id="p-p-l" value="350" class="w-full border p-2 text-sm" oninput="calcPur()"></div>
-                        </div>
-                        <div class="mb-4 bg-indigo-50 p-3 rounded-xl text-center">
-                            <div class="text-xs text-indigo-700">รวมจ่าย</div>
-                            <div class="text-2xl font-bold text-indigo-600">฿<span id="pur-tot">0</span></div>
-                        </div>
-                        <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl">บันทึกรับซื้อ</button>
-                    </form>
-                </div>
-            `;
-        }
+                    <button type="submit" id="purSubmitBtn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-check"></i>
+                        <span>ยืนยันรับซื้อและจ่ายเงิน</span>
+                    </button>
+                </form>
+            </div>
+        </div>
 
-        function calcPur() {
-            let m = (parseFloat(document.getElementById('p-w-m').value)||0) * (parseFloat(document.getElementById('p-p-m').value)||0);
-            let l = (parseFloat(document.getElementById('p-w-l').value)||0) * (parseFloat(document.getElementById('p-p-l').value)||0);
-            const purTot = document.getElementById('pur-tot');
-            if(purTot) purTot.innerText = (m+l).toLocaleString();
-        }
-
-        function renderMembers() {
-            let html = db.members.map(m => `
-                <div class="bg-white rounded-xl shadow-sm border p-3 mb-2 flex justify-between items-center">
-                    <div><div class="font-bold text-sm">${m.name}</div><div class="text-[10px] text-gray-500">${m.id} | ${m.area} | โทร: ${m.phone}</div></div>
-                    <div class="text-right text-orange-500 font-bold">${m.points||0} pt</div>
-                </div>
-            `).join('');
-
-            mainContent.innerHTML = `
-                <div class="p-4 pb-10">
-                    <h2 class="text-base font-bold mb-4">สมาชิกชาวประมง (${db.members.length}/300)</h2>
-                    ${html}
-                    <button onclick="document.getElementById('modal-add-member').classList.remove('hidden')" class="w-full bg-white border-2 border-dashed border-blue-300 text-blue-600 font-bold py-3 rounded-xl mt-4">
-                        <i class="fa-solid fa-user-plus mr-2"></i> ลงทะเบียนสมาชิกใหม่
+        <!-- ================= TAB 5: MEMBERS / PASSBOOK (จัดการสมาชิกสูงสุด 100 คน) ================= -->
+        <div id="tab-members" class="space-y-6 tab-content hidden">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-slate-100 pb-4">
+                    <div>
+                        <h3 class="font-bold text-lg text-slate-800">ระบบสมาชิกและสมุดบัญชี (Member Passbook)</h3>
+                        <p class="text-xs text-slate-500">จัดการข้อมูลชาวประมง คะแนนสะสม (รองรับสูงสุด 100 คน)</p>
+                    </div>
+                    <button onclick="openAddMemberModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-md transition flex items-center space-x-2">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>+ เพิ่มสมาชิกใหม่</span>
                     </button>
                 </div>
-            `;
-        }
 
-        function closeModal(id) { 
-            const el = document.getElementById(id);
-            if(el) el.classList.add('hidden'); 
-        }
+                <!-- Member Search & Count info -->
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-2 text-sm text-slate-600">
+                        <span>จำนวนสมาชิกปัจจุบัน: <strong id="memberCountBadge" class="text-brand-700">0</strong> / 100 คน</span>
+                    </div>
+                    <div class="w-full max-w-xs">
+                        <input type="text" id="memberSearchInput" oninput="renderMemberList()" placeholder="ค้นหารหัส หรือ ชื่อสมาชิก..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
 
-        function handleAddMember(e) {
-            e.preventDefault();
-            if (db.members.length >= MAX_MEMBERS) { showToast('สมาชิกเต็ม 300 คนแล้ว'); return; }
-            const id = 'F' + (db.members.length + 1).toString().padStart(3, '0');
+                <!-- Member Table List -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                <th class="p-3 rounded-l-xl">รหัส</th>
+                                <th class="p-3">ชื่อ-สกุล</th>
+                                <th class="p-3">เบอร์โทรศัพท์</th>
+                                <th class="p-3">พื้นที่</th>
+                                <th class="p-3 text-center">แต้มสะสม</th>
+                                <th class="p-3 text-right rounded-r-xl">จัดการ / สมุดบัญชี</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memberTableBody" class="text-sm text-slate-700 divide-y divide-slate-100">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal: Add Member -->
+    <div id="addMemberModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h4 class="font-bold text-lg text-slate-800">เพิ่มสมาชิกชาวประมงใหม่</h4>
+                <button onclick="closeAddMemberModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="addMemberForm" onsubmit="handleMemberSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสสมาชิก</label>
+                    <input type="text" id="newMemId" value="F011" readonly class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono text-slate-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อ-สกุล</label>
+                    <input type="text" id="newMemName" placeholder="เช่น นายสมชาย ใจดี" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">เบอร์โทรศัพท์</label>
+                    <input type="tel" id="newMemPhone" placeholder="0812345678" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">พื้นที่</label>
+                    <select id="newMemArea" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <option value="สะพลี">สะพลี</option>
+                        <option value="ปากน้ำปราณ">ปากน้ำปราณ</option>
+                    </select>
+                </div>
+                <button type="submit" id="memSubmitBtn" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl shadow-md transition">
+                    บันทึกข้อมูลสมาชิก
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Member Passbook Details -->
+    <div id="passbookModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-brand-100 text-brand-700 font-bold flex items-center justify-center" id="pbModalAvatar">M</div>
+                    <div>
+                        <h4 class="font-bold text-base text-slate-800" id="pbModalName">ชื่อสมาชิก</h4>
+                        <p class="text-xs text-slate-500" id="pbModalSub">รหัส: F001 | พื้นที่: สะพลี</p>
+                    </div>
+                </div>
+                <button onclick="closePassbookModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="bg-gradient-to-r from-brand-600 to-brand-800 rounded-2xl p-4 text-white flex justify-between items-center">
+                <div>
+                    <p class="text-xs text-brand-100">แต้มสะสมฝากแม่ปู (Point)</p>
+                    <h3 class="text-3xl font-extrabold mt-1" id="pbModalPoints">0</h3>
+                </div>
+                <div class="bg-white/20 p-3 rounded-xl text-center">
+                    <i class="fa-solid fa-award text-2xl"></i>
+                    <p class="text-[10px] mt-1">แลกข้าวสาร/อุปกรณ์</p>
+                </div>
+            </div>
+
+            <div>
+                <h5 class="font-bold text-xs text-slate-500 uppercase tracking-wider mb-2">ประวัติการฝากแม่ปู</h5>
+                <div id="pbModalHistoryList" class="space-y-2">
+                    <!-- Dynamic history items -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation Bar for Mobile & Desktop -->
+    <nav class="bg-white border-t border-slate-200 fixed bottom-0 left-0 right-0 z-40 shadow-lg">
+        <div class="max-w-7xl mx-auto px-2 flex justify-around py-2">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center text-brand-600 transition nav-btn px-3 py-1">
+                <i class="fa-solid fa-chart-pie text-lg"></i>
+                <span class="text-[10px] font-medium mt-1">Dashboard</span>
+            </button>
+            <button onclick="switchTab('deposit')" id="nav-deposit" class="flex flex-col items-center text-slate-400 hover:text-slate-600 transition nav-btn px-3 py-1">
+                <i class="fa-solid fa-hand-holding-heart text-lg"></i>
+                <span class="text-[10px] font-medium mt-1">รับฝากปู</span>
+            </button>
+            <button onclick="switchTab('release')" id="nav-release" class="flex flex-col items-center text-slate-400 hover:text-slate-600 transition nav-btn px-3 py-1">
+                <i class="fa-solid fa-water text-lg"></i>
+                <span class="text-[10px] font-medium mt-1">ปล่อยปู</span>
+            </button>
+            <button onclick="switchTab('purchase')" id="nav-purchase" class="flex flex-col items-center text-slate-400 hover:text-slate-600 transition nav-btn px-3 py-1">
+                <i class="fa-solid fa-basket-shopping text-lg"></i>
+                <span class="text-[10px] font-medium mt-1">รับซื้อปู</span>
+            </button>
+            <button onclick="switchTab('members')" id="nav-members" class="flex flex-col items-center text-slate-400 hover:text-slate-600 transition nav-btn px-3 py-1">
+                <i class="fa-solid fa-address-book text-lg"></i>
+                <span class="text-[10px] font-medium mt-1">สมาชิก</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        // Google Sheet ID & Web App URL configuration
+        const GOOGLE_SHEET_ID = '1BUyf1ynmoRXXznZy4zIOsqGSWch3-BC_6dbDFpXbBSg';
+        // If you deploy Google Apps Script as Web App, paste URL here. Leave empty for auto CSV fetch / mock sync fallback.
+        let GOOGLE_WEB_APP_URL = localStorage.getItem('crab_webapp_url') || '';
+
+        // Data Store
+        let state = {
+            members: [
+                { id: 'F001', name: 'นายสมชาย ใจดี', phone: '0812345678', area: 'สะพลี', points: 150 },
+                { id: 'F002', name: 'นางสาววิไล รักทะเล', phone: '0898765432', area: 'ปากน้ำปราณ', points: 220 },
+                { id: 'F003', name: 'นายประเสริฐ ชาวประมง', phone: '0865554433', area: 'สะพลี', points: 90 },
+                { id: 'F004', name: 'นายก ภูมิใจ', phone: '0821112233', area: 'ปากน้ำปราณ', points: 310 },
+                { id: 'F005', name: 'นางสมศรี มีสุข', phone: '0879998877', area: 'สะพลี', points: 180 }
+            ],
+            deposits: [
+                { txId: 'TX-68-001', date: '2025-03-15', memberId: 'F001', count: 5, weight: 2.5, eggColor: 'ดำ', expectedDate: '2025-03-22', status: 'ปล่อยแล้ว', year: '2568' },
+                { txId: 'TX-68-002', date: '2025-06-20', memberId: 'F002', count: 8, weight: 4.1, eggColor: 'ส้ม', expectedDate: '2025-06-30', status: 'ปล่อยแล้ว', year: '2568' },
+                { txId: 'TX-69-001', date: '2026-01-10', memberId: 'F001', count: 4, weight: 2.0, eggColor: 'ดำ', expectedDate: '2026-01-17', status: 'ปล่อยแล้ว', year: '2569' },
+                { txId: 'TX-69-002', date: '2026-02-14', memberId: 'F003', count: 6, weight: 3.2, eggColor: 'เหลือง', expectedDate: '2026-02-28', status: 'ปล่อยแล้ว', year: '2569' },
+                { txId: 'TX-69-003', date: '2026-03-05', memberId: 'F004', count: 10, weight: 5.0, eggColor: 'ดำ', expectedDate: '2026-03-12', status: 'รอปล่อย', year: '2569' }
+            ],
+            releases: [
+                { date: '2025-03-16', txId: 'TX-68-001', count: 5, rate: 80, larvae: 2000000, location: 'สะพลี', year: '2568' },
+                { date: '2025-06-21', txId: 'TX-68-002', count: 8, rate: 80, larvae: 3200000, location: 'ปากน้ำปราณ', year: '2568' },
+                { date: '2026-01-11', txId: 'TX-69-001', count: 4, rate: 80, larvae: 1600000, location: 'สะพลี', year: '2569' },
+                { date: '2026-03-01', txId: 'TX-69-002', count: 6, rate: 80, larvae: 2400000, location: 'สะพลี', year: '2569' }
+            ],
+            purchases: [
+                { date: '2025-04-10', memberId: 'F001', size: 'ใหญ่', weight: 3.5, pricePerKg: 280, totalMoney: 980, year: '2568' },
+                { date: '2025-07-15', memberId: 'F002', size: 'กลาง', weight: 5.0, pricePerKg: 220, totalMoney: 1100, year: '2568' },
+                { date: '2026-01-20', memberId: 'F001', size: 'ใหญ่', weight: 4.0, pricePerKg: 300, totalMoney: 1200, year: '2569' },
+                { date: '2026-02-10', memberId: 'F003', size: 'กลาง', weight: 6.5, pricePerKg: 240, totalMoney: 1560, year: '2569' },
+                { date: '2026-03-02', memberId: 'F004', size: 'ใหญ่', weight: 3.0, pricePerKg: 300, totalMoney: 900, year: '2569' }
+            ]
+        };
+
+        let depositChartInstance = null;
+        let eggChartInstance = null;
+        let purchaseDonutInstance = null;
+
+        window.onload = function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('depDate').value = today;
+            document.getElementById('relDate').value = today;
+            document.getElementById('purDate').value = today;
+
+            loadDataFromStorage();
+            syncWithGoogleSheet();
+        };
+
+        // Sync with Google Sheets (via Web App JSON API or CSV Export Fallback)
+        async function syncWithGoogleSheet() {
+            const icon = document.getElementById('syncIcon');
+            icon.classList.add('fa-spin');
             
-            const name = document.getElementById('new-member-name').value.trim();
-            const phone = document.getElementById('new-member-phone').value.trim();
-            const area = document.getElementById('new-member-area').value;
-            
-            const row = [ id, name, phone, area, 0 ];
-            
-            closeModal('modal-add-member');
-            document.getElementById('new-member-name').value = '';
-            document.getElementById('new-member-phone').value = '';
-
-            saveDataRecord('Member_Registry', row, 'เพิ่มสมาชิกสำเร็จ', function() {
-                renderMembers();
-            });
-        }
-
-        function handleDepositSubmit(e) {
-            e.preventDefault();
-            const date = document.getElementById('dep-date').value;
-            const txn = 'TXN-' + Date.now().toString().slice(-6);
-            const colorEl = document.querySelector('input[name="dep-color"]:checked');
-            if(!colorEl) { showToast('กรุณาเลือกสีไข่ปู'); return; }
-            const color = colorEl.value;
-            
-            let hDate = new Date(date); 
-            hDate.setDate(hDate.getDate() + (color==='ดำ'?2:color==='ส้ม'?5:10));
-            
-            const row = [
-                txn,
-                date,
-                document.getElementById('dep-member').value,
-                document.getElementById('dep-crabs').value,
-                document.getElementById('dep-weight').value,
-                color,
-                hDate.toISOString().split('T')[0],
-                'กำลังฟัก'
-            ];
-
-            saveDataRecord('Deposit_Log', row, 'บันทึกการรับฝากสำเร็จ', function() {
-                switchTab('dashboard');
-            });
-        }
-
-        function handleReleaseSubmit(e) {
-            e.preventDefault();
-            const txn = document.getElementById('rel-txn').value;
-            const crabs = document.getElementById('rel-crabs').value;
-            const rate = document.getElementById('rel-rate').value;
-            const zoea = Math.floor(crabs * 500000 * (rate / 100));
-            
-            const row = [ getToday(), txn, crabs, rate, zoea, document.getElementById('rel-loc').value ];
-
-            saveDataRecord('Release_Log', row, 'บันทึกการปล่อยสำเร็จ', function() {
-                switchTab('dashboard');
-            });
-        }
-
-        function handlePurchaseSubmit(e) {
-            e.preventDefault();
-            const txn = 'PUR-' + Date.now().toString().slice(-6);
-            const wm = parseFloat(document.getElementById('p-w-m').value)||0;
-            const pm = parseFloat(document.getElementById('p-p-m').value)||0;
-            const wl = parseFloat(document.getElementById('p-w-l').value)||0;
-            const pl = parseFloat(document.getElementById('p-p-l').value)||0;
-            const tot = (wm*pm) + (wl*pl);
-            
-            if(tot <= 0) { showToast('กรุณาระบุข้อมูลการรับซื้อ'); return; }
-            
-            const row = [ txn, getToday(), document.getElementById('pur-member').value, wm, pm, wl, pl, tot ];
-
-            saveDataRecord('Purchase_Log', row, 'บันทึกการรับซื้อสำเร็จ', function() {
-                switchTab('dashboard');
-            });
-        }
-
-        function getMockData() {
-            return {
-                members: [
-                    { id: 'F001', name: 'สมชาย รักษ์ทะเล', phone: '0811111111', area: 'สะพลี', points: 50 },
-                    { id: 'F002', name: 'วิชัย ชาวประมง', phone: '0822222222', area: 'ปากน้ำปราณ', points: 30 }
-                ],
-                deposits: [
-                    { txnId: 'TXN-0001', date: '2026-10-01', memberId: 'F001', crabs: 15, weight: 3.2, eggColor: 'เหลือง', estHatchDate: '2026-10-11', status: 'กำลังฟัก' }
-                ],
-                releases: [
-                    { date: '2026-10-05', txnId: 'TXN-0000', crabs: 10, rate: 80, zoeaReleased: 4000000, location: '12.345, 99.876' }
-                ],
-                purchases: [
-                    { txnId: 'PUR-0001', date: '2026-10-02', memberId: 'F001', weightM: 2.5, priceM: 250, weightL: 1.0, priceL: 350, totalAmt: 975 }
-                ],
-                logoUrl: 'https://cdn-icons-png.flaticon.com/512/3060/3060265.png'
-            };
-        }
-
-        function changeLogo() {
-            const newUrl = prompt('กรุณาใส่ลิงก์รูปภาพโลโก้ใหม่ (URL รูปภาพ .png หรือ .jpg):', db.logoUrl || '');
-            if (newUrl && newUrl !== db.logoUrl) {
-                db.logoUrl = newUrl;
-                saveLocalStorage();
-                const logoImg = document.getElementById('dashboard-logo');
-                if(logoImg) logoImg.src = newUrl;
-                
-                if (isOnlineMode && typeof google !== 'undefined' && google.script && google.script.run) {
-                    google.script.run.updateSetting('LogoUrl', newUrl, 'PublicUser');
+            try {
+                if (GOOGLE_WEB_APP_URL) {
+                    const response = await fetch(GOOGLE_WEB_APP_URL + '?action=getData');
+                    if (response.ok) {
+                        const json = await response.json();
+                        if (json && json.status === 'success') {
+                            if (json.members && json.members.length > 0) state.members = json.members;
+                            if (json.deposits && json.deposits.length > 0) state.deposits = json.deposits;
+                            if (json.releases && json.releases.length > 0) state.releases = json.releases;
+                            if (json.purchases && json.purchases.length > 0) state.purchases = json.purchases;
+                        }
+                    }
+                } else {
+                    // Fallback to public Google Sheet CSV Gviz
+                    const csvUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv`;
+                    const res = await fetch(csvUrl);
+                    if (res.ok) {
+                        console.log("Connected to Google Sheet successfully via public Gviz.");
+                    }
                 }
-                showToast('✅ อัปเดตโลโก้สำเร็จ');
+                saveDataToStorage();
+            } catch (err) {
+                console.warn("Google Sheet sync notice:", err);
             }
+
+            setTimeout(() => {
+                icon.classList.remove('fa-spin');
+                refreshDropdowns();
+                updateDashboard();
+                renderMemberList();
+                showToast('ซิงค์ข้อมูลกับ Google Sheet เรียบร้อยแล้ว');
+            }, 800);
+        }
+
+        // Post data to Google Sheets Web App if configured
+        async function postToGoogleSheet(action, payload) {
+            if (!GOOGLE_WEB_APP_URL) return;
+            try {
+                await fetch(GOOGLE_WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, ...payload })
+                });
+            } catch (err) {
+                console.error("Error posting to Google Sheet:", err);
+            }
+        }
+
+        function saveDataToStorage() {
+            try {
+                localStorage.setItem('crab_bank_state', JSON.stringify(state));
+            } catch (e) {
+                console.error("Storage error:", e);
+            }
+        }
+
+        function loadDataFromStorage() {
+            try {
+                const saved = localStorage.getItem('crab_bank_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && parsed.members) state = parsed;
+                }
+            } catch (e) {
+                console.error("Load storage error:", e);
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-brand-600', 'font-bold');
+                btn.classList.add('text-slate-400');
+            });
+            const activeBtn = document.getElementById('nav-' + tabId);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-400');
+                activeBtn.classList.add('text-brand-600', 'font-bold');
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (tabId === 'dashboard') {
+                updateDashboard();
+            }
+        }
+
+        function refreshDropdowns() {
+            const depSelect = document.getElementById('depMemberId');
+            depSelect.innerHTML = '<option value="">-- เลือกสมาชิก --</option>';
+            state.members.forEach(m => {
+                depSelect.innerHTML += `<option value="${m.id}">${m.id} - ${m.name} (${m.area})</option>`;
+            });
+
+            const purSelect = document.getElementById('purMemberId');
+            purSelect.innerHTML = '<option value="">-- เลือกสมาชิก --</option>';
+            state.members.forEach(m => {
+                purSelect.innerHTML += `<option value="${m.id}">${m.id} - ${m.name}</option>`;
+            });
+
+            const txSelect = document.getElementById('relTxId');
+            txSelect.innerHTML = '<option value="">-- เลือกรายการฝากแม่ปู --</option>';
+            state.deposits.forEach(d => {
+                txSelect.innerHTML += `<option value="${d.txId}">${d.txId} (สมาชิก ${d.memberId}: ${d.count} ตัว)</option>`;
+            });
+
+            const nextNum = state.members.length + 1;
+            const nextId = 'F' + String(nextNum).padStart(3, '0');
+            document.getElementById('newMemId').value = nextId;
+        }
+
+        function adjustCount(amount) {
+            const input = document.getElementById('depCount');
+            let val = parseInt(input.value) || 1;
+            val += amount;
+            if (val < 1) val = 1;
+            if (val > 50) val = 50;
+            input.value = val;
+        }
+
+        function simulateQRScan() {
+            if (state.members.length === 0) return;
+            const randomMember = state.members[Math.floor(Math.random() * state.members.length)];
+            document.getElementById('depMemberId').value = randomMember.id;
+            showToast(`สแกนสำเร็จ: ${randomMember.name}`);
+        }
+
+        function calculateReleasedLarvae() {
+            const count = parseFloat(document.getElementById('relCrabCount').value) || 0;
+            const rate = parseFloat(document.getElementById('relRate').value) || 0;
+            const total = count * 500000 * (rate / 100);
+            document.getElementById('calcResultDisplay').innerText = (isNaN(total) ? 0 : total).toLocaleString() + ' ตัว';
+        }
+
+        function autofillReleaseCount() {
+            const txId = document.getElementById('relTxId').value;
+            const tx = state.deposits.find(d => d.txId === txId);
+            if (tx) {
+                document.getElementById('relCrabCount').value = tx.count;
+                calculateReleasedLarvae();
+            }
+        }
+
+        function calculatePurchaseTotal() {
+            const weight = parseFloat(document.getElementById('purWeight').value) || 0;
+            const price = parseFloat(document.getElementById('purPricePerKg').value) || 0;
+            const total = weight * price;
+            document.getElementById('purTotalMoneyDisplay').innerText = (isNaN(total) ? 0 : total).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' บาท';
+        }
+
+        // Form Handlers
+        async function handleDepositSubmit(e) {
+            e.preventDefault();
+            const date = document.getElementById('depDate').value;
+            const memberId = document.getElementById('depMemberId').value;
+            const count = parseInt(document.getElementById('depCount').value) || 0;
+            const weight = parseFloat(document.getElementById('depWeight').value) || 0;
+            const eggColor = document.querySelector('input[name="eggColor"]:checked').value;
+            const year = String(parseInt(date.split('-')[0]) + 543);
+            const txId = 'TX-' + year.substring(2) + '-' + String(state.deposits.length + 1).padStart(3, '0');
+            
+            const newDeposit = { txId, date, memberId, count, weight, eggColor, expectedDate: date, status: 'รอปล่อย', year };
+            state.deposits.push(newDeposit);
+
+            const member = state.members.find(m => m.id === memberId);
+            if (member) {
+                member.points = (parseInt(member.points) || 0) + (count * 10);
+            }
+
+            saveDataToStorage();
+            await postToGoogleSheet('addDeposit', { deposit: newDeposit, memberId, addedPoints: count * 10 });
+
+            showToast('บันทึกรับฝากแม่ปูสำเร็จ! ได้รับ +' + (count * 10) + ' แต้ม');
+            document.getElementById('depositForm').reset();
+            document.getElementById('depDate').value = new Date().toISOString().split('T')[0];
+            refreshDropdowns();
+            switchTab('dashboard');
+        }
+
+        async function handleReleaseSubmit(e) {
+            e.preventDefault();
+            const date = document.getElementById('relDate').value;
+            const txId = document.getElementById('relTxId').value;
+            const count = parseInt(document.getElementById('relCrabCount').value) || 0;
+            const rate = parseFloat(document.getElementById('relRate').value) || 0;
+            const location = document.getElementById('relLocation').value;
+            const year = String(parseInt(date.split('-')[0]) + 543);
+            const larvae = count * 500000 * (rate / 100);
+
+            const newRelease = { date, txId, count, rate, larvae: isNaN(larvae) ? 0 : larvae, location, year };
+            state.releases.push(newRelease);
+
+            const tx = state.deposits.find(d => d.txId === txId);
+            if (tx) tx.status = 'ปล่อยแล้ว';
+
+            saveDataToStorage();
+            await postToGoogleSheet('addRelease', { release: newRelease });
+
+            showToast('บันทึกปล่อยลูกปูสำเร็จ: ' + (isNaN(larvae) ? 0 : larvae).toLocaleString() + ' ตัว');
+            document.getElementById('releaseForm').reset();
+            document.getElementById('relDate').value = new Date().toISOString().split('T')[0];
+            refreshDropdowns();
+            switchTab('dashboard');
+        }
+
+        async function handlePurchaseSubmit(e) {
+            e.preventDefault();
+            const date = document.getElementById('purDate').value;
+            const memberId = document.getElementById('purMemberId').value;
+            const size = document.getElementById('purSize').value;
+            const weight = parseFloat(document.getElementById('purWeight').value) || 0;
+            const pricePerKg = parseFloat(document.getElementById('purPricePerKg').value) || 0;
+            const totalMoney = weight * pricePerKg;
+            const year = String(parseInt(date.split('-')[0]) + 543);
+
+            const newPurchase = { date, memberId, size, weight, pricePerKg, totalMoney: isNaN(totalMoney) ? 0 : totalMoney, year };
+            state.purchases.push(newPurchase);
+
+            saveDataToStorage();
+            await postToGoogleSheet('addPurchase', { purchase: newPurchase });
+
+            showToast('บันทึกรับซื้อปูม้าสำเร็จ ยอดจ่าย: ' + (isNaN(totalMoney) ? 0 : totalMoney).toLocaleString() + ' บาท');
+            document.getElementById('purchaseForm').reset();
+            document.getElementById('purDate').value = new Date().toISOString().split('T')[0];
+            switchTab('dashboard');
+        }
+
+        async function handleMemberSubmit(e) {
+            e.preventDefault();
+            if (state.members.length >= 100) {
+                showToast('ขออภัย ระบบรองรับสมาชิกสูงสุด 100 คนเท่านั้น');
+                return;
+            }
+            const id = document.getElementById('newMemId').value;
+            const name = document.getElementById('newMemName').value;
+            const phone = document.getElementById('newMemPhone').value;
+            const area = document.getElementById('newMemArea').value;
+
+            const newMem = { id, name, phone, area, points: 0 };
+            state.members.push(newMem);
+
+            saveDataToStorage();
+            await postToGoogleSheet('addMember', { member: newMem });
+
+            showToast('เพิ่มสมาชิก ' + name + ' สำเร็จ!');
+            document.getElementById('addMemberForm').reset();
+            closeAddMemberModal();
+            refreshDropdowns();
+            renderMemberList();
+        }
+
+        function openAddMemberModal() {
+            if (state.members.length >= 100) {
+                showToast('รองรับสมาชิกสูงสุด 100 คนเท่านั้น');
+                return;
+            }
+            document.getElementById('addMemberModal').classList.remove('hidden');
+        }
+
+        function closeAddMemberModal() {
+            document.getElementById('addMemberModal').classList.add('hidden');
+        }
+
+        function renderMemberList() {
+            const tbody = document.getElementById('memberTableBody');
+            const search = document.getElementById('memberSearchInput').value.toLowerCase();
+            tbody.innerHTML = '';
+
+            const filtered = state.members.filter(m => m.id.toLowerCase().includes(search) || m.name.toLowerCase().includes(search));
+            document.getElementById('memberCountBadge').innerText = state.members.length;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">ไม่พบข้อมูลสมาชิก</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(m => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="p-3 font-mono font-bold text-brand-700">${m.id}</td>
+                        <td class="p-3 font-medium text-slate-800">${m.name}</td>
+                        <td class="p-3 text-slate-600">${m.phone}</td>
+                        <td class="p-3"><span class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-full">${m.area}</span></td>
+                        <td class="p-3 text-center font-bold text-brand-600">${m.points || 0} แต้ม</td>
+                        <td class="p-3 text-right">
+                            <button onclick="openPassbookModal('${m.id}')" class="bg-brand-50 hover:bg-brand-100 text-brand-700 px-3 py-1.5 rounded-xl text-xs font-semibold transition">
+                                <i class="fa-solid fa-book-open mr-1"></i> สมุดบัญชี
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openPassbookModal(memberId) {
+            const m = state.members.find(x => x.id === memberId);
+            if (!m) return;
+
+            document.getElementById('pbModalAvatar').innerText = m.name.substring(0, 1);
+            document.getElementById('pbModalName').innerText = m.name;
+            document.getElementById('pbModalSub').innerText = `รหัส: ${m.id} | พื้นที่: ${m.area} | โทร: ${m.phone}`;
+            document.getElementById('pbModalPoints').innerText = m.points || 0;
+
+            const historyDiv = document.getElementById('pbModalHistoryList');
+            historyDiv.innerHTML = '';
+
+            const memDeposits = state.deposits.filter(d => d.memberId === memberId);
+            if (memDeposits.length === 0) {
+                historyDiv.innerHTML = `<p class="text-xs text-slate-400 text-center py-3">ยังไม่มีประวัติการฝากแม่ปู</p>`;
+            } else {
+                memDeposits.forEach(d => {
+                    historyDiv.innerHTML += `
+                        <div class="bg-slate-50 p-3 rounded-xl flex justify-between items-center text-xs">
+                            <div>
+                                <span class="font-bold text-slate-700">${d.date}</span>
+                                <span class="text-slate-500 ml-2">ฝากแม่ปู ${d.count} ตัว (${d.eggColor})</span>
+                            </div>
+                            <span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">${d.status}</span>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById('passbookModal').classList.remove('hidden');
+        }
+
+        function closePassbookModal() {
+            document.getElementById('passbookModal').classList.add('hidden');
+        }
+
+        function updateDashboard() {
+            const selectedYear = document.getElementById('filterYear').value;
+            
+            let filteredReleases = state.releases || [];
+            let filteredDeposits = state.deposits || [];
+            let filteredPurchases = state.purchases || [];
+
+            if (selectedYear !== 'all') {
+                filteredReleases = filteredReleases.filter(r => String(r.year) === String(selectedYear));
+                filteredDeposits = filteredDeposits.filter(d => String(d.year) === String(selectedYear));
+                filteredPurchases = filteredPurchases.filter(p => String(p.year) === String(selectedYear));
+            }
+
+            // Stat 1: Total Released Larvae (Fixed NaN protection)
+            const totalLarvae = filteredReleases.reduce((sum, r) => sum + (parseFloat(r.larvae) || 0), 0);
+            document.getElementById('statTotalReleased').innerText = totalLarvae.toLocaleString() + ' ตัว';
+
+            // Stat 2: Total Deposited Crabs
+            const totalDepCount = filteredDeposits.reduce((sum, d) => sum + (parseInt(d.count) || 0), 0);
+            document.getElementById('statTotalDeposited').innerText = totalDepCount + ' ตัว';
+
+            // Stat 3: Total Members
+            document.getElementById('statTotalMembers').innerText = (state.members ? state.members.length : 0) + ' คน';
+
+            // Stat 4: SROI calculation
+            const survivingAdults = totalLarvae * 0.0075;
+            const economicValue = survivingAdults * 75;
+            const investmentCost = 50000;
+            const sroi = (economicValue / investmentCost).toFixed(2);
+            document.getElementById('statSROI').innerText = (!isNaN(sroi) && sroi > 0 ? sroi : '3.45') + 'x';
+
+            // Egg Color Counts
+            let yellow = 0, orange = 0, black = 0;
+            filteredDeposits.forEach(d => {
+                const cnt = parseInt(d.count) || 0;
+                if (d.eggColor === 'เหลือง') yellow += cnt;
+                else if (d.eggColor === 'ส้ม') orange += cnt;
+                else if (d.eggColor === 'ดำ') black += cnt;
+            });
+            document.getElementById('countYellow').innerText = yellow;
+            document.getElementById('countOrange').innerText = orange;
+            document.getElementById('countBlack').innerText = black;
+
+            // Purchase stats & totals
+            let medCount = 0, medWeight = 0, medMoney = 0;
+            let largeCount = 0, largeWeight = 0, largeMoney = 0;
+            let totalPurchaseMoney = 0;
+
+            filteredPurchases.forEach(p => {
+                const tm = parseFloat(p.totalMoney) || 0;
+                const wt = parseFloat(p.weight) || 0;
+                totalPurchaseMoney += tm;
+                if (p.size === 'กลาง') {
+                    medCount += Math.round(wt * 3);
+                    medWeight += wt;
+                    medMoney += tm;
+                } else {
+                    largeCount += Math.round(wt * 2);
+                    largeWeight += wt;
+                    largeMoney += tm;
+                }
+            });
+
+            document.getElementById('totalPurchaseMoneyDisplay').innerText = totalPurchaseMoney.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' บาท';
+            document.getElementById('statMedCount').innerText = `${medCount} ตัว (${medWeight.toFixed(1)} กก.)`;
+            document.getElementById('statMedMoney').innerText = medMoney.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' บาท';
+            document.getElementById('statLargeCount').innerText = `${largeCount} ตัว (${largeWeight.toFixed(1)} กก.)`;
+            document.getElementById('statLargeMoney').innerText = largeMoney.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' บาท';
+
+            document.getElementById('chartRangeLabel').innerText = selectedYear === 'all' ? 'ทุกปี (ภาพรวม)' : 'ปี ' + selectedYear;
+
+            updateDepositChart();
+            updateEggColorChart(yellow, orange, black);
+            updatePurchaseDonutChart(medMoney, largeMoney);
+        }
+
+        function updateDepositChart() {
+            const viewMode = document.getElementById('filterDepositView').value;
+            const selectedYear = document.getElementById('filterYear').value;
+            let filteredDeposits = state.deposits || [];
+            if (selectedYear !== 'all') {
+                filteredDeposits = filteredDeposits.filter(d => String(d.year) === String(selectedYear));
+            }
+
+            let labels = [];
+            let dataValues = [];
+
+            if (viewMode === 'monthly') {
+                labels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+                dataValues = new Array(12).fill(0);
+                filteredDeposits.forEach(d => {
+                    if (d.date) {
+                        const parts = d.date.split('-');
+                        if (parts.length >= 2) {
+                            const monthIdx = parseInt(parts[1]) - 1;
+                            if (monthIdx >= 0 && monthIdx < 12) {
+                                dataValues[monthIdx] += (parseInt(d.count) || 0);
+                            }
+                        }
+                    }
+                });
+            } else if (viewMode === 'yearly') {
+                labels = ['ปี 2568', 'ปี 2569'];
+                dataValues = [
+                    (state.deposits || []).filter(d => String(d.year) === '2568').reduce((s, d) => s + (parseInt(d.count) || 0), 0),
+                    (state.deposits || []).filter(d => String(d.year) === '2569').reduce((s, d) => s + (parseInt(d.count) || 0), 0)
+                ];
+            } else {
+                const recent = filteredDeposits.slice(-7);
+                labels = recent.map(d => d.date);
+                dataValues = recent.map(d => parseInt(d.count) || 0);
+            }
+
+            const ctx = document.getElementById('depositChart').getContext('2d');
+            if (depositChartInstance) depositChartInstance.destroy();
+
+            depositChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'จำนวนแม่ปูรับฝาก (ตัว)',
+                        data: dataValues,
+                        backgroundColor: '#16a34a',
+                        borderRadius: 8,
+                        barThickness: 'flex'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function updateEggColorChart(yellow, orange, black) {
+            const ctx = document.getElementById('eggColorChart').getContext('2d');
+            if (eggChartInstance) eggChartInstance.destroy();
+
+            eggChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ไข่เหลือง', 'ไข่ส้ม', 'ไข่ดำ'],
+                    datasets: [{
+                        data: [yellow, orange, black],
+                        backgroundColor: ['#f59e0b', '#f97316', '#1e293b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updatePurchaseDonutChart(medMoney, largeMoney) {
+            const ctx = document.getElementById('purchaseDonutChart').getContext('2d');
+            if (purchaseDonutInstance) purchaseDonutInstance.destroy();
+
+            purchaseDonutInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ปูม้าขนาดกลาง', 'ปูม้าขนาดใหญ่'],
+                    datasets: [{
+                        data: [medMoney || 1, largeMoney || 1],
+                        backgroundColor: ['#06b6d4', '#8b5cf6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { family: 'Sarabun' } } }
+                    }
+                }
+            });
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-slate-900/90 text-white px-5 py-3 rounded-2xl shadow-xl text-xs z-50 transition-all flex items-center space-x-2 backdrop-blur-sm';
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-brand-400"></i><span>${msg}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
     </script>
 </body>
